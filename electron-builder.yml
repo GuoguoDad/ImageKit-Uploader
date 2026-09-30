@@ -1,0 +1,57 @@
+appId: io.imagekit.uploader.desktop
+productName: ImageKit Uploader
+copyright: Copyright © 2026 ImageKit Uploader
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  - '!**/{.eslintrc,.editorconfig,.prettierrc}'
+
+asar: true
+compression: normal
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  darkModeSupport: true
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  identity: null
+  extendInfo:
+    NSHumanReadableCopyright: Copyright © 2026 ImageKit Uploader
+    CFBundleName: ImageKit Uploader
+    LSMinimumSystemVersion: '10.15'
+
+dmg:
+  artifactName: ${name}-${version}-${arch}.${ext}
+  title: ${productName}
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${name}-${version}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ImageKit Uploader
+  deleteAppDataOnUninstall: false
+
+linux:
+  target:
+    - AppImage
+  category: Graphics

@@ -1,0 +1,15 @@
+{
+  "_comment": "ImageKit 上传工具配置模板。把本文件复制为 config.json 并填写下方字段即可。Public key / Private key 在 ImageKit 控制台 Developer Options -> API Keys 中获取。",
+  "_privateKeyWarning": "Private Key 属于敏感凭证，请勿提交到 Git 仓库或分享给他人。",
+  "name": "ImageKit Uploader",
+  "publicKey": "public_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "privateKey": "private_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "urlEndpoint": "https://ik.imagekit.io/your_imagekit_id",
+  "defaultFolder": "/uploads",
+  "defaultTags": "",
+  "useUniqueFileName": true,
+  "concurrency": 3,
+  "theme": "dark",
+  "customEndpoint": "",
+  "apiEndpoint": ""
+}

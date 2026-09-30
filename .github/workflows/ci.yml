@@ -1,0 +1,48 @@
+name: CI
+
+# 每次推送到主分支或提 PR 时，快速校验代码能否通过类型检查与构建。
+# 不打安装包（打包在 release.yml 里，tag 触发）。
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: 类型检查与构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+        env:
+          # 仓库里的 .npmrc 指向 npmmirror（方便国内本地开发），
+          # CI 跑在境外机器上，这里临时切回官方源。
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+          # 这个 job 只做类型检查和编译，不需要真的下载 Electron 二进制（省 ~100MB）
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 构建主进程 / 预加载 / 渲染进程
+        run: npm run build

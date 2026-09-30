@@ -1,0 +1,14 @@
+node_modules/
+out/
+release/
+dist/
+.npm-cache/
+.idea/
+.vscode/
+.DS_Store
+*.log
+.env
+.env.local
+.tmp-*
+config.local.json
+electron.vite.config.*.mjs
