@@ -1,73 +1,73 @@
 # ImageKit Uploader
 
-基于 **Electron + React + Vite + TypeScript** 的 [imagekit.io](https://imagekit.io/) 桌面上传工具，支持 **macOS** 与 **Windows**。
+A desktop uploader for [imagekit.io](https://imagekit.io/) built with **Electron + React + Vite + TypeScript**, targeting **macOS** and **Windows**.
 
-Public Key / Private Key / Name 全部写在工具的**配置文件**里，后期改配置即可生效，不用重新打包。
+The Public Key, Private Key, and Name all live in the app's **config file**. Change the config later and it takes effect immediately — no rebuild required.
 
 ---
 
-## 功能特性
+## Features
 
-| 能力 | 说明 |
+| Capability | Description |
 | --- | --- |
-| 三种添加方式 | 拖拽文件、点击选择、`⌘/Ctrl + V` 粘贴剪贴板截图 |
-| 并发队列 | 默认 3 个并发（可调 1–8），逐文件进度条、失败重试、中途取消 |
-| 直接上传 | 主进程内完成 HMAC-SHA1 签名与上传，不依赖任何中转服务 |
-| 上传参数 | 目录、标签、唯一文件名，可在界面上按批调整 |
-| 本地目录浏览 | 选择本机文件夹，列出其中的子目录与文件，勾选后批量加入队列 |
-| 云端目录浏览 | 浏览 ImageKit 上已有的目录与已上传文件（带缩略图），**单击目录即设为上传目标**，双击（或点 `→`）进入该目录 |
-| 一键复制 | 复制链接 / Markdown / HTML / 全部链接 |
-| 历史记录 | 最近 300 条成功记录，持久化在本地，可复制或删除 |
-| 主题 | 深色 / 浅色 / 跟随系统 |
-| 零密钥外泄 | Private Key 只留在主进程与本机配置文件，渲染进程拿不到 |
+| Three ways to add files | Drag & drop, file picker, or paste a clipboard screenshot with `⌘/Ctrl + V` |
+| Concurrent queue | 3 uploads in parallel by default (adjustable 1–8), per-file progress bar, retry on failure, cancel mid-flight |
+| Direct upload | HMAC-SHA1 signing and uploading happen in the main process — no relay service involved |
+| Upload options | Folder, tags, and unique-filename per batch, adjustable from the UI |
+| Local directory browsing | Pick a folder on your machine, list its sub-directories and files, then select files to enqueue |
+| Cloud directory browsing | Browse existing ImageKit folders and uploaded files (with thumbnails). **Click a folder to set it as the upload target**; double-click (or hit `→`) to enter it |
+| One-click copy | Copy URL / Markdown / HTML / all links |
+| History | The last 300 successful uploads, persisted locally, copyable and deletable |
+| Themes | Dark / light / follow system |
+| No key leakage | The Private Key stays in the main process and the local config file; the renderer never sees it |
 
 ---
 
-## 快速开始
+## Quick Start
 
 ```bash
-# 1. 安装依赖
+# 1. Install dependencies
 npm install
 
-# 2. 开发模式（热更新）
+# 2. Development mode (hot reload)
 npm run dev
 
-# 3. 生产构建（只编译，不打包安装包）
+# 3. Production build (compile only, no installers)
 npm run build
 
-# 4. 打包安装包
-npm run build:mac     # → release/*.dmg（Apple Silicon + Intel）
-npm run build:win     # → release/*-setup.exe（NSIS 安装包，需在 Windows 上执行）
-npm run build:all     # 同时产出 mac + win
-npm run build:unpack  # 只产出免安装目录，方便本地验证
+# 4. Package installers
+npm run build:mac     # → release/*.dmg (Apple Silicon + Intel)
+npm run build:win     # → release/*-setup.exe (NSIS installer, run on Windows)
+npm run build:all     # Produce both mac + win
+npm run build:unpack  # Unpacked directory only, handy for local verification
 ```
 
-> 在 macOS 上打 Windows 安装包需要额外安装 Wine，建议直接在 Windows 机器或 CI 上执行 `npm run build:win`。
+> Building the Windows installer on macOS requires Wine. It's best to run `npm run build:win` on a Windows machine or in CI.
 
 ---
 
-## 配置（Public Key / Private Key / Name）
+## Configuration (Public Key / Private Key / Name)
 
-### 1. 获取凭证
+### 1. Get your credentials
 
-登录 imagekit.io 控制台 → **Developer Options → API Keys**，拿到：
+Sign in to the imagekit.io dashboard → **Developer Options → API Keys** and grab:
 
-- `Public Key`（形如 `public_xxxxxxxx`）
-- `Private Key`（形如 `private_xxxxxxxx`，**属于敏感凭证**）
-- `URL Endpoint`（形如 `https://ik.imagekit.io/your_imagekit_id`），在 **URL-endpoints** 页面查看
+- `Public Key` (looks like `public_xxxxxxxx`)
+- `Private Key` (looks like `private_xxxxxxxx` — **this is a sensitive credential**)
+- `URL Endpoint` (looks like `https://ik.imagekit.io/your_imagekit_id`), found on the **URL-endpoints** page
 
-### 2. 配置文件位置
+### 2. Config file location
 
-首次启动会自动生成 `config.json`：
+`config.json` is created automatically on first launch:
 
-| 系统 | 路径 |
+| OS | Path |
 | --- | --- |
 | macOS | `~/Library/Application Support/ImageKit Uploader/config.json` |
 | Windows | `%APPDATA%\ImageKit Uploader\config.json` |
 
-也可以通过环境变量 `IMAGEKIT_UPLOAD_CONFIG` 指向任意路径，例如把配置放在 U 盘或项目目录里。
+You can also point the app at any path with the `IMAGEKIT_UPLOAD_CONFIG` environment variable — useful for keeping the config on a USB drive or inside a project folder.
 
-### 3. 配置字段
+### 3. Config fields
 
 ```json
 {
@@ -84,151 +84,152 @@ npm run build:unpack  # 只产出免安装目录，方便本地验证
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 | --- | --- | --- |
-| `name` | string | 工具显示名称 / 账号标识，显示在窗口标题栏 |
+| `name` | string | App display name / account label, shown in the window title bar |
 | `publicKey` | string | ImageKit Public Key |
-| `privateKey` | string | ImageKit Private Key，用于生成上传签名 |
-| `urlEndpoint` | string | CDN 地址，用于把 `filePath` 拼成最终访问链接 |
-| `defaultFolder` | string | 默认上传目录，`/` 表示根目录 |
-| `defaultTags` | string | 默认标签，逗号分隔 |
-| `useUniqueFileName` | boolean | `true` 时同名文件自动追加后缀，避免覆盖 |
-| `concurrency` | number | 并发上传数，1–8 |
-| `theme` | `"dark" \| "light" \| "system"` | 界面主题 |
-| `customEndpoint` | string | 自定义上传端点，留空使用官方 `upload.imagekit.io` |
+| `privateKey` | string | ImageKit Private Key, used to generate upload signatures |
+| `urlEndpoint` | string | CDN endpoint, used to join `filePath` into the final URL |
+| `defaultFolder` | string | Default upload folder, `/` means the root |
+| `defaultTags` | string | Default tags, comma-separated |
+| `useUniqueFileName` | boolean | When `true`, same-name files get a suffix instead of overwriting |
+| `concurrency` | number | Number of concurrent uploads, 1–8 |
+| `theme` | `"dark" \| "light" \| "system"` | UI theme |
+| `customEndpoint` | string | Custom upload endpoint; leave empty to use the official `upload.imagekit.io` |
 
-### 4. 两种修改方式
+### 4. Two ways to change it
 
-1. **界面里改**：右上角「设置」→ 填写 → 「保存」；也可以点「保存并测试连接」直接验证凭证是否有效。
-2. **直接改文件**：用编辑器打开 `config.json`，保存后回到应用点「设置 → 重新加载配置」即可，无需重启。
+1. **In the UI**: click **Settings** in the top right, fill in the fields, then **Save**. You can also click **Save & Test Connection** to verify the credentials right away.
+2. **Edit the file**: open `config.json` in an editor, save, then click **Settings → Reload Config** in the app. No restart needed.
 
-模板文件见仓库根目录的 [`config.example.json`](./config.example.json)。
+See [`config.example.json`](./config.example.json) for the template.
 
-> ⚠️ `privateKey` 等价于账号密码，请勿提交到 Git、也勿随安装包分发。`.gitignore` 已经排除了 `config.local.json` 与 `.env`。
+> ⚠️ The `privateKey` is as sensitive as an account password. Never commit it to Git or ship it inside a build. `.gitignore` already excludes `config.local.json` and `.env`.
 
 ---
 
-## 项目结构
+## Project Structure
 
 ```
 imageKit-upload/
 ├── .github/workflows/
-│   ├── ci.yml                   # 提交/PR：类型检查 + 三端构建
-│   └── release.yml              # 打 tag：出 dmg / exe 并发布 Release
-├── build/                       # 打包资源（应用图标等），见 build/README.md
-├── electron.vite.config.ts      # 主/预加载/渲染三端构建配置
-├── electron-builder.yml         # mac dmg + win nsis 打包配置
-├── config.example.json          # 配置模板
+│   ├── ci.yml                   # push/PR: typecheck + build all three targets
+│   └── release.yml              # tags: build dmg / exe and publish a Release
+├── build/                       # Packaging assets (app icons etc.), see build/README.md
+├── electron.vite.config.ts      # Main / preload / renderer build config
+├── electron-builder.yml         # mac dmg + win nsis packaging config
+├── config.example.json          # Config template
 ├── src/
-│   ├── shared/types.ts          # 主进程与渲染进程共享类型
-│   ├── main/                    # 主进程（Node 侧，持有 Private Key）
-│   │   ├── index.ts             # 窗口创建 + 全部 IPC 处理器
-│   │   ├── config.ts            # config.json 读写与校验
-│   │   ├── imagekit.ts          # HMAC-SHA1 签名 + 分片上传 + 连通性测试
-│   │   ├── history.ts           # 上传历史持久化
-│   │   └── mime.ts              # 扩展名 → MIME
-│   ├── preload/index.ts         # contextBridge 白名单 API
-│   └── renderer/                # 渲染进程（React UI）
+│   ├── shared/types.ts          # Types shared by main and renderer
+│   ├── main/                    # Main process (Node side, holds the Private Key)
+│   │   ├── index.ts             # Window creation + all IPC handlers
+│   │   ├── config.ts            # config.json read/write and validation
+│   │   ├── imagekit.ts          # HMAC-SHA1 signing + chunked upload + connection test
+│   │   ├── history.ts           # Upload history persistence
+│   │   └── mime.ts              # Extension → MIME
+│   ├── preload/index.ts         # contextBridge allow-list API
+│   └── renderer/                # Renderer process (React UI)
 │       ├── index.html
 │       └── src/
-│           ├── App.tsx          # 状态编排 + 并发调度
-│           ├── components/      # 顶栏/拖拽区/队列/历史/设置/提示
+│           ├── App.tsx          # State orchestration + concurrency scheduling
+│           ├── components/      # Header / drop zone / queue / history / settings / toasts
 │           ├── hooks/useToasts.ts
-│           ├── lib/             # 主题、格式化、剪贴板工具
-│           └── styles/index.css # 深浅双主题样式
+│           ├── lib/             # Theme, formatting, clipboard helpers
+│           └── styles/index.css # Light & dark theme styles
 ```
 
 ---
 
-## 上传原理
+## How Uploads Work
 
-ImageKit 要求上传请求携带由 Private Key 签名的鉴权参数：
+ImageKit requires upload requests to carry auth parameters signed with the Private Key:
 
 ```
-token     = 随机 UUID
-expire    = 当前时间戳 + 1800 秒
+token     = random UUID
+expire    = current timestamp + 1800 seconds
 signature = HMAC-SHA1(privateKey, token + expire)
 ```
 
-请求以 `multipart/form-data` POST 到 `https://upload.imagekit.io/api/v1/files/upload`，字段包含
-`file`、`fileName`、`publicKey`、`signature`、`expire`、`token`、`folder`、`tags`、`useUniqueFileName`。
+The request is a `multipart/form-data` POST to `https://upload.imagekit.io/api/v1/files/upload` with the fields
+`file`, `fileName`, `publicKey`, `signature`, `expire`, `token`, `folder`, `tags`, and `useUniqueFileName`.
 
-签名与上传都在**主进程**完成，渲染进程只通过 IPC 拿到结果，因此 Private Key 不会进入网页上下文。
+Both signing and uploading happen in the **main process**; the renderer only receives the result over IPC, so the Private Key never enters the web context.
 
 ---
 
-## 云端目录浏览
+## Cloud Directory Browsing
 
-「云端目录」标签页直接读取 ImageKit 管理 API（`GET /v1/files?type=all&path=...`），
-列出当前目录下的**子目录**与**已上传文件**（图片带缩略图），并且兼任「选上传目录」的入口：
+The **Cloud** tab reads ImageKit's management API directly (`GET /v1/files?type=all&path=...`) and lists
+the **sub-directories** and **already-uploaded files** (images include thumbnails) of the current directory.
+It also doubles as the "pick an upload folder" entry point:
 
-| 操作 | 行为 |
+| Action | Behavior |
 | --- | --- |
-| **单击**目录名 | 把该目录设为**本次上传的目标目录**（行会高亮并打上「上传目标」标记，顶部与底部同步显示） |
-| **双击**目录名 / 点右侧 `→` | 进入该目录 |
-| 面包屑 / 上级 / 根目录 | 纯浏览，不会改动上传目标 |
-| 底部「上传到 {当前目录}」 | 一键把**正在浏览的目录**设为上传目标 |
-| 顶部「浏览」按钮 | 打开弹窗，在任意位置选中目录作为上传目标 |
+| **Click** a folder name | Sets that folder as the **target folder for this batch** (the row highlights with an "Upload target" badge, and the top bar and footer stay in sync) |
+| **Double-click** a folder name / click the `→` button | Enters that folder |
+| Breadcrumbs / Up / Root | Pure browsing — the upload target is not changed |
+| Footer "Upload to {current folder}" | Sets the **folder you are currently browsing** as the upload target in one click |
+| Top bar "Browse" button | Opens a dialog to pick a folder anywhere as the upload target |
 
-目录名比较统一走规范化路径，`/a/`、`/a`、`a` 会被视为同一个目录。
-注意 ImageKit 的目录是虚拟的，新建目录后索引有 1~2 秒延迟，界面会自动重试刷新。
+Folder names are compared using normalized paths, so `/a/`, `/a`, and `a` are treated as the same folder.
+Note that ImageKit folders are virtual: a newly created folder has a 1–2 second indexing delay, and the UI retries automatically.
 
 ---
 
-## 自动化构建（GitHub Actions）
+## Automated Builds (GitHub Actions)
 
-仓库内置两条工作流，都在 `.github/workflows/` 下：
+Two workflows ship with the repo, both under `.github/workflows/`:
 
-| 工作流 | 触发条件 | 做什么 |
+| Workflow | Trigger | What it does |
 | --- | --- | --- |
-| `ci.yml` | 推送到 `main`/`master`、提交 PR、手动 | 在 Ubuntu 上跑 `npm run typecheck` + `npm run build`，验证代码能编译（不打安装包） |
-| `release.yml` | 推送 `v*` 标签、手动 | 在 `macos-14` 和 `windows-latest` 上分别打出 dmg / exe；标签触发时自动创建 GitHub Release |
+| `ci.yml` | Push to `main`/`master`, pull requests, manual | Runs `npm run typecheck` + `npm run build` on Ubuntu to verify the code compiles (no installers) |
+| `release.yml` | Push a `v*` tag, manual | Builds dmg / exe on `macos-14` and `windows-latest`; a tag push also creates a GitHub Release |
 
-### 发布一个版本
+### Publishing a release
 
 ```bash
-# 1. 把 package.json 里的 version 改成目标版本（例如 1.0.1）
+# 1. Bump the version in package.json to the target (e.g. 1.0.1)
 git commit -am "chore: release v1.0.1"
 
-# 2. 打标签并推送，工作流自动开始打包 + 发布
+# 2. Tag and push — the workflow starts packaging and publishing
 git tag v1.0.1
 git push origin main --tags
 ```
 
-跑完后在 **Releases** 页面就能看到 `imagekit-upload-1.0.1-arm64.dmg`、
-`imagekit-upload-1.0.1-x64.dmg`、`imagekit-upload-1.0.1-setup.exe` 三个产物。
+When it finishes, the **Releases** page shows three artifacts:
+`imagekit-upload-1.0.1-arm64.dmg`, `imagekit-upload-1.0.1-x64.dmg`, and `imagekit-upload-1.0.1-setup.exe`.
 
-> 工作流会用标签里的版本号覆盖 `package.json` 的 `version`（`npm version ${tag#v}`），
-> 所以标签版本和 package.json 不一致时以标签为准。
+> The workflow overwrites `package.json`'s `version` with the version from the tag
+> (`npm version ${tag#v}`), so the tag wins if the two disagree.
 
-只想看产物、不发 Release：在 **Actions → Release → Run workflow** 手动触发，
-跑完后到该次运行的 Artifacts 区域下载（保留 7 天）。
+To produce artifacts without publishing a Release, run **Actions → Release → Run workflow** manually
+and download them from the run's Artifacts section (kept for 7 days).
 
-### 关于签名
+### About code signing
 
-当前配置下产物**未做代码签名**（`electron-builder.yml` 里 `identity: null`）：
+Artifacts are currently **unsigned** (`identity: null` in `electron-builder.yml`):
 
-- **macOS**：首次打开会提示「已损坏」或「无法验证开发者」。右键 →「打开」，
-  或执行 `xattr -cr "/Applications/ImageKit Uploader.app"`。
-- **Windows**：SmartScreen 会拦一下，点「更多信息 → 仍要运行」即可。
+- **macOS**: The first launch may report the app is "damaged" or from an unidentified developer. Right-click → **Open**,
+  or run `xattr -cr "/Applications/ImageKit Uploader.app"`.
+- **Windows**: SmartScreen will warn you; click **More info → Run anyway**.
 
-要正式签名，在仓库 **Settings → Secrets and variables → Actions** 里加上
-`CSC_LINK`（证书 p12 的 base64）和 `CSC_KEY_PASSWORD`，并把 `electron-builder.yml`
-里的 `identity: null` 去掉即可，工作流无需改动。
+To sign properly, add `CSC_LINK` (the base64 of your p12 certificate) and `CSC_KEY_PASSWORD` under
+**Settings → Secrets and variables → Actions**, then remove `identity: null` from `electron-builder.yml`.
+No workflow changes are needed.
 
-### 关于依赖源
+### About the package registry
 
-本地 `.npmrc` 指向 `registry.npmmirror.com`（方便国内开发），CI 跑在境外机器上，
-两条工作流都通过 `NPM_CONFIG_REGISTRY` 环境变量临时切回 `registry.npmjs.org`，
-不需要改仓库里的 `.npmrc`。
+The local `.npmrc` points at `registry.npmmirror.com` (fast for development in China), while CI runs on overseas
+machines. Both workflows temporarily switch back to `registry.npmjs.org` via the `NPM_CONFIG_REGISTRY` environment
+variable, so the repo's `.npmrc` does not need to be changed.
 
 ---
 
-## 常见问题
+## Troubleshooting
 
-**`npm run dev` 报 `Cannot read properties of undefined (reading 'requestSingleInstanceLock')`**
+**`npm run dev` fails with `Cannot read properties of undefined (reading 'requestSingleInstanceLock')`**
 
-说明当前终端设置了 `ELECTRON_RUN_AS_NODE`，Electron 被当成普通 Node 启动了。取消该变量即可：
+Your terminal has `ELECTRON_RUN_AS_NODE` set, so Electron starts as plain Node. Unset it:
 
 ```bash
 # macOS / Linux
@@ -238,21 +239,21 @@ env -u ELECTRON_RUN_AS_NODE npm run dev
 Remove-Item Env:\ELECTRON_RUN_AS_NODE; npm run dev
 ```
 
-**上传返回 401 / 403**
+**Upload returns 401 / 403**
 
-Private Key 不正确，或该 Key 没有 Files 权限。到「设置」里点「保存并测试连接」定位问题。
+The Private Key is wrong, or the key lacks Files permission. Go to **Settings** and click **Save & Test Connection** to pinpoint the issue.
 
-**上传成功但链接点不开**
+**Upload succeeds but the link does not open**
 
-`urlEndpoint` 没填或填错。填好后重新上传，或在历史记录里复制 `url` 字段（ImageKit 直接返回的地址）。
+`urlEndpoint` is missing or incorrect. Fill it in and re-upload, or copy the `url` field from the history entry (the address ImageKit returns directly).
 
-**Windows 打包失败**
+**Windows packaging fails**
 
-`npm run build:win` 建议在 Windows 本机或 CI 上执行；在 macOS 上交叉打包需要 Wine。
+Run `npm run build:win` on Windows or in CI; cross-compiling from macOS requires Wine.
 
 ---
 
-## 技术栈
+## Tech Stack
 
 Electron 33 · React 18 · Vite 5 · TypeScript 5 · electron-vite · electron-builder
 
