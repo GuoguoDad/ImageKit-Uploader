@@ -1,4 +1,6 @@
+import type { MessageKey } from '@shared/i18n'
 import type { QueueItem } from '@shared/types'
+import { useT } from '../lib/i18n'
 import { cn, formatBytes, truncateMiddle } from '../lib/utils'
 import {
   IconCheck,
@@ -23,12 +25,12 @@ interface QueueListProps {
   onReveal: (path: string) => void
 }
 
-const STATUS_TEXT: Record<QueueItem['status'], string> = {
-  pending: '等待中',
-  uploading: '上传中',
-  success: '已完成',
-  error: '失败',
-  canceled: '已取消'
+const STATUS_KEY: Record<QueueItem['status'], MessageKey> = {
+  pending: 'queue.status.pending',
+  uploading: 'queue.status.uploading',
+  success: 'queue.status.success',
+  error: 'queue.status.error',
+  canceled: 'queue.status.canceled'
 }
 
 function remoteUrl(item: QueueItem): string {
@@ -45,6 +47,7 @@ function QueueRow({
   onOpen,
   onReveal
 }: Omit<QueueListProps, 'items'> & { item: QueueItem }) {
+  const t = useT()
   const percent = Math.round(item.progress * 100)
   const url = remoteUrl(item)
 
@@ -68,7 +71,7 @@ function QueueRow({
           <span className={cn('status-tag', `status-tag--${item.status}`)}>
             {item.status === 'success' && <IconCheck size={12} />}
             {item.status === 'error' && <IconClose size={12} />}
-            {STATUS_TEXT[item.status]}
+            {t(STATUS_KEY[item.status])}
             {item.status === 'uploading' && ` ${percent}%`}
           </span>
         </div>
@@ -90,7 +93,7 @@ function QueueRow({
         ) : (
           <p className="queue-row__meta">
             {formatBytes(item.size)}
-            {item.status === 'pending' ? ' · 排队等待上传' : ''}
+            {item.status === 'pending' ? t('queue.queuedNote') : ''}
           </p>
         )}
       </div>
@@ -98,30 +101,30 @@ function QueueRow({
       <div className="queue-row__actions">
         {item.status === 'pending' && (
           <>
-            <button type="button" className="icon-btn icon-btn--sm" title="立即上传" onClick={() => onUpload(item.id)}>
+            <button type="button" className="icon-btn icon-btn--sm" title={t('queue.uploadNow')} onClick={() => onUpload(item.id)}>
               <IconRefresh size={15} />
             </button>
-            <button type="button" className="icon-btn icon-btn--sm" title="移除" onClick={() => onRemove(item.id)}>
+            <button type="button" className="icon-btn icon-btn--sm" title={t('common.remove')} onClick={() => onRemove(item.id)}>
               <IconTrash size={15} />
             </button>
           </>
         )}
 
         {item.status === 'uploading' && (
-          <button type="button" className="icon-btn icon-btn--sm" title="取消上传" onClick={() => onCancel(item.id)}>
+          <button type="button" className="icon-btn icon-btn--sm" title={t('queue.cancelUpload')} onClick={() => onCancel(item.id)}>
             <IconStop size={15} />
           </button>
         )}
 
         {item.status === 'success' && (
           <>
-            <button type="button" className="icon-btn icon-btn--sm" title="复制链接" onClick={() => onCopy(item, 'url')}>
+            <button type="button" className="icon-btn icon-btn--sm" title={t('common.copyLink')} onClick={() => onCopy(item, 'url')}>
               <IconCopy size={15} />
             </button>
-            <button type="button" className="icon-btn icon-btn--sm" title="在浏览器打开" onClick={() => onOpen(url)}>
+            <button type="button" className="icon-btn icon-btn--sm" title={t('common.openInBrowser')} onClick={() => onOpen(url)}>
               <IconExternal size={15} />
             </button>
-            <button type="button" className="icon-btn icon-btn--sm" title="移除" onClick={() => onRemove(item.id)}>
+            <button type="button" className="icon-btn icon-btn--sm" title={t('common.remove')} onClick={() => onRemove(item.id)}>
               <IconTrash size={15} />
             </button>
           </>
@@ -129,10 +132,10 @@ function QueueRow({
 
         {(item.status === 'error' || item.status === 'canceled') && (
           <>
-            <button type="button" className="icon-btn icon-btn--sm" title="重试" onClick={() => onRetry(item.id)}>
+            <button type="button" className="icon-btn icon-btn--sm" title={t('common.retry')} onClick={() => onRetry(item.id)}>
               <IconRefresh size={15} />
             </button>
-            <button type="button" className="icon-btn icon-btn--sm" title="移除" onClick={() => onRemove(item.id)}>
+            <button type="button" className="icon-btn icon-btn--sm" title={t('common.remove')} onClick={() => onRemove(item.id)}>
               <IconTrash size={15} />
             </button>
           </>
@@ -143,14 +146,15 @@ function QueueRow({
 }
 
 export function QueueList(props: QueueListProps) {
+  const t = useT()
   const { items } = props
 
   if (items.length === 0) {
     return (
       <div className="empty">
         <IconImage size={28} />
-        <p>队列为空</p>
-        <span>添加文件后会自动开始上传</span>
+        <p>{t('queue.empty')}</p>
+        <span>{t('queue.emptyHint')}</span>
       </div>
     )
   }

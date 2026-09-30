@@ -1,4 +1,5 @@
 import type { Toast } from '../hooks/useToasts'
+import { useT } from '../lib/i18n'
 import { IconCheck, IconClose } from './Icons'
 
 interface ToastsProps {
@@ -7,6 +8,7 @@ interface ToastsProps {
 }
 
 export function Toasts({ toasts, onDismiss }: ToastsProps) {
+  const t = useT()
   if (toasts.length === 0) return null
 
   return (
@@ -15,7 +17,7 @@ export function Toasts({ toasts, onDismiss }: ToastsProps) {
         <div key={toast.id} className={`toast toast--${toast.kind}`}>
           {toast.kind === 'error' ? <IconClose size={15} /> : <IconCheck size={15} />}
           <span>{toast.message}</span>
-          <button type="button" onClick={() => onDismiss(toast.id)} title="关闭">
+          <button type="button" onClick={() => onDismiss(toast.id)} title={t('common.close')}>
             <IconClose size={13} />
           </button>
         </div>

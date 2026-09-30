@@ -1,5 +1,7 @@
 # ImageKit Uploader
 
+**English** · [简体中文](./README.zh-CN.md)
+
 A desktop uploader for [imagekit.io](https://imagekit.io/) built with **Electron + React + Vite + TypeScript**, targeting **macOS** and **Windows**.
 
 The Public Key, Private Key, and Name all live in the app's **config file**. Change the config later and it takes effect immediately — no rebuild required.
@@ -19,6 +21,7 @@ The Public Key, Private Key, and Name all live in the app's **config file**. Cha
 | One-click copy | Copy URL / Markdown / HTML / all links |
 | History | The last 300 successful uploads, persisted locally, copyable and deletable |
 | Themes | Dark / light / follow system |
+| Language | English / 简体中文, **English by default**, switchable at runtime and remembered across restarts |
 | No key leakage | The Private Key stays in the main process and the local config file; the renderer never sees it |
 
 ---
@@ -80,7 +83,9 @@ You can also point the app at any path with the `IMAGEKIT_UPLOAD_CONFIG` environ
   "useUniqueFileName": true,
   "concurrency": 3,
   "theme": "dark",
-  "customEndpoint": ""
+  "customEndpoint": "",
+  "apiEndpoint": "",
+  "language": "en"
 }
 ```
 
@@ -96,6 +101,8 @@ You can also point the app at any path with the `IMAGEKIT_UPLOAD_CONFIG` environ
 | `concurrency` | number | Number of concurrent uploads, 1–8 |
 | `theme` | `"dark" \| "light" \| "system"` | UI theme |
 | `customEndpoint` | string | Custom upload endpoint; leave empty to use the official `upload.imagekit.io` |
+| `apiEndpoint` | string | Management API base URL; leave empty to use `https://api.imagekit.io/v1` |
+| `language` | `"en" \| "zh"` | Interface language, **defaults to `"en"`**; unknown values fall back to English |
 
 ### 4. Two ways to change it
 
@@ -105,6 +112,20 @@ You can also point the app at any path with the `IMAGEKIT_UPLOAD_CONFIG` environ
 See [`config.example.json`](./config.example.json) for the template.
 
 > ⚠️ The `privateKey` is as sensitive as an account password. Never commit it to Git or ship it inside a build. `.gitignore` already excludes `config.local.json` and `.env`.
+
+### 5. Switching the interface language
+
+The UI ships in **English (default)** and **Simplified Chinese**. Three equivalent ways to switch:
+
+| Where | How |
+| --- | --- |
+| Header badge | Click the language chip (`English` / `简体中文`) next to the theme button — toggles instantly |
+| Settings | **Settings → Interface → Language**, pick a segment |
+| Config file | Set `"language": "zh"` and click **Reload Config** |
+
+The choice is written to `config.json` right away and is picked up on the next launch. `theme` and `language` apply immediately without saving; other fields in the Settings dialog still need **Save`.
+
+> The whole interface is localized — including main-process error messages, native file dialogs, and the comments at the top of the generated `config.json`. That header is regenerated in the current language on the next save.
 
 ---
 
@@ -119,13 +140,19 @@ imageKit-upload/
 ├── electron.vite.config.ts      # Main / preload / renderer build config
 ├── electron-builder.yml         # mac dmg + win nsis packaging config
 ├── config.example.json          # Config template
+├── README.md                    # This file (English, default)
+├── README.zh-CN.md              # Simplified Chinese version
 ├── src/
-│   ├── shared/types.ts          # Types shared by main and renderer
+│   ├── shared/
+│   │   ├── types.ts             # Types shared by main and renderer
+│   │   └── i18n.ts              # en/zh message dictionaries + translate()
 │   ├── main/                    # Main process (Node side, holds the Private Key)
 │   │   ├── index.ts             # Window creation + all IPC handlers
 │   │   ├── config.ts            # config.json read/write and validation
+│   │   ├── lang.ts              # Main-process language holder (errors, dialogs)
 │   │   ├── imagekit.ts          # HMAC-SHA1 signing + chunked upload + connection test
 │   │   ├── history.ts           # Upload history persistence
+│   │   ├── fs.ts                # Local directory listing / file collection
 │   │   └── mime.ts              # Extension → MIME
 │   ├── preload/index.ts         # contextBridge allow-list API
 │   └── renderer/                # Renderer process (React UI)
@@ -133,10 +160,26 @@ imageKit-upload/
 │       └── src/
 │           ├── App.tsx          # State orchestration + concurrency scheduling
 │           ├── components/      # Header / drop zone / queue / history / settings / toasts
-│           ├── hooks/useToasts.ts
-│           ├── lib/             # Theme, formatting, clipboard helpers
+│           ├── hooks/           # Toasts, local & remote directory browsing
+│           ├── lib/
+│           │   ├── i18n.tsx     # I18nProvider + useT()/useI18n()
+│           │   └── ...          # Theme, formatting, clipboard helpers
 │           └── styles/index.css # Light & dark theme styles
 ```
+
+---
+
+## Internationalization
+
+All UI copy lives in **`src/shared/i18n.ts`**: a flat, dotted message key → text map.
+
+- `en` is the single source of truth. `MessageKey` is derived from it, and the `zh` dictionary is typed as `Record<MessageKey, string>` — so a missing or misspelled translation fails `npm run typecheck` instead of silently falling back.
+- Placeholders use `{name}` and are substituted by `translate(lang, key, params)`.
+- The renderer gets `t` from `useT()` / `useI18n()` (React context in `src/renderer/src/lib/i18n.tsx`); the main process calls `mainT()` from `src/main/lang.ts`, which tracks the language synced from `config.json` on every load.
+- The interface language also drives the main-process errors, the native dialog titles, and `<html lang>`.
+- Cancellation is detected with `isCanceledMessage()`, which matches the string against every supported language — never hard-code a translated string in a comparison.
+
+To add a language: add the code to `Language`, add `LANGUAGE_LABELS`, and add a dictionary typed as `Record<MessageKey, string>`. TypeScript will list every key you still need to translate.
 
 ---
 

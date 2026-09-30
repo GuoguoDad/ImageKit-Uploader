@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { RemoteFolder } from '@shared/types'
 import { useRemoteBrowser } from '../hooks/useRemoteBrowser'
 import type { Toast } from '../hooks/useToasts'
+import { useT } from '../lib/i18n'
 import { cn } from '../lib/utils'
 import { RemoteBreadcrumbs } from './RemoteBrowser'
 import {
@@ -36,6 +37,7 @@ export function RemoteFolderPicker({
   onConfirm,
   push
 }: RemoteFolderPickerProps) {
+  const t = useT()
   const browser = useRemoteBrowser(push, { foldersOnly: true })
   const [newOpen, setNewOpen] = useState(false)
   const [newName, setNewName] = useState('')
@@ -89,10 +91,10 @@ export function RemoteFolderPicker({
       >
         <div className="modal__head">
           <div>
-            <h2>选择上传目录</h2>
-            <p>浏览 ImageKit 上已有的目录，选中后作为本次上传的目标目录</p>
+            <h2>{t('remote.pickerTitle')}</h2>
+            <p>{t('remote.pickerSubtitle')}</p>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} title="关闭">
+          <button type="button" className="icon-btn" onClick={onClose} title={t('common.close')}>
             <IconClose size={17} />
           </button>
         </div>
@@ -107,7 +109,7 @@ export function RemoteFolderPicker({
                 onClick={() => void browser.goParent()}
               >
                 <IconArrowUp size={14} />
-                上级
+                {t('common.up')}
               </button>
               <button
                 type="button"
@@ -116,13 +118,13 @@ export function RemoteFolderPicker({
                 onClick={() => void browser.goRoot()}
               >
                 <IconHome size={14} />
-                根目录
+                {t('common.root')}
               </button>
               <button
                 type="button"
                 className="icon-btn icon-btn--sm"
                 disabled={loading}
-                title="刷新"
+                title={t('common.refresh')}
                 onClick={() => void browser.refresh()}
               >
                 <IconRefresh size={15} />
@@ -134,7 +136,7 @@ export function RemoteFolderPicker({
                 onClick={() => setNewOpen((v) => !v)}
               >
                 <IconPlus size={14} />
-                新建目录
+                {t('common.newFolder')}
               </button>
             </div>
 
@@ -148,7 +150,7 @@ export function RemoteFolderPicker({
                   value={newName}
                   autoFocus
                   spellCheck={false}
-                  placeholder="新目录名，例如 banner"
+                  placeholder={t('common.newFolderPlaceholder')}
                   disabled={creating}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => {
@@ -161,7 +163,7 @@ export function RemoteFolderPicker({
                   disabled={creating || !newName.trim()}
                   onClick={() => void handleCreate()}
                 >
-                  {creating ? '创建中…' : '创建'}
+                  {creating ? t('common.creating') : t('common.create')}
                 </button>
               </div>
             )}
@@ -169,12 +171,10 @@ export function RemoteFolderPicker({
             {error && <p className="browser__warn">{error}</p>}
 
             <div className="browser__list">
-              {loading && <div className="browser__loading">读取中…</div>}
+              {loading && <div className="browser__loading">{t('common.loading')}</div>}
 
               {!loading && folders.length === 0 && (
-                <div className="browser__empty-hint">
-                  这个目录下没有子目录，可以直接把当前目录作为上传目标
-                </div>
+                <div className="browser__empty-hint">{t('remote.pickerEmpty')}</div>
               )}
 
               {!loading &&
@@ -195,15 +195,15 @@ export function RemoteFolderPicker({
                       </button>
 
                       {folder.pending && (
-                        <span className="entry__badge" title="ImageKit 正在建立索引">
-                          同步中
+                        <span className="entry__badge" title={t('remote.indexBadge')}>
+                          {t('common.syncing')}
                         </span>
                       )}
 
                       {isTarget && (
                         <span className="r-tag r-tag--target">
                           <IconCheck size={11} />
-                          已选
+                          {t('remote.pickerSelected')}
                         </span>
                       )}
 
@@ -213,14 +213,14 @@ export function RemoteFolderPicker({
                           className={cn('btn', 'btn--sm', isTarget ? 'btn--ghost' : 'btn--primary')}
                           onClick={() => onConfirm(folder.path)}
                         >
-                          选中
+                          {t('remote.pickerSelect')}
                         </button>
                       </span>
 
                       <button
                         type="button"
                         className="icon-btn icon-btn--sm"
-                        title="进入该目录"
+                        title={t('remote.rowOpenTitle', { path: folder.path })}
                         onClick={() => void browser.open(folder.path)}
                       >
                         <IconChevronRight size={14} />
@@ -232,7 +232,7 @@ export function RemoteFolderPicker({
 
             <div className="browser__actions">
               <span className="browser__actions-hint">
-                当前位置：<code>{current}</code>
+                {t('remote.pickerCurrent', { path: current })}
               </span>
 
               <div className="browser__spacer" />
@@ -243,7 +243,7 @@ export function RemoteFolderPicker({
                 disabled={!listing || current === '/'}
                 onClick={() => onConfirm('/')}
               >
-                选根目录
+                {t('remote.pickerSelectRoot')}
               </button>
 
               <button
@@ -253,7 +253,7 @@ export function RemoteFolderPicker({
                 onClick={() => onConfirm(current)}
               >
                 <IconTarget size={14} />
-                选中当前目录
+                {t('remote.pickerSelectCurrent')}
               </button>
             </div>
           </div>

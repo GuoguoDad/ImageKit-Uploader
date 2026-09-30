@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useT } from '../lib/i18n'
 import { cn, collapseCrumbs, formatBytes, pathBreadcrumbs } from '../lib/utils'
 import type { DirectoryBrowser as BrowserState } from '../hooks/useDirectoryBrowser'
 import {
@@ -41,6 +42,7 @@ function fileIcon(name: string) {
 }
 
 export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
+  const t = useT()
   const { listing, loading, showHidden, selected, recursive } = browser
 
   const { dirs, files } = useMemo(() => {
@@ -67,8 +69,8 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
       <div className="browser browser--empty">
         <div className="empty">
           <IconFolderOpen size={30} />
-          <p>还没有选择目录</p>
-          <span>选一个本地目录，就能列出里面的子目录和文件</span>
+          <p>{t('local.noFolder')}</p>
+          <span>{t('local.noFolderHint')}</span>
           <button
             type="button"
             className="btn btn--primary"
@@ -77,7 +79,7 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
             onClick={() => void browser.pick()}
           >
             <IconFolderOpen size={15} />
-            {loading ? '读取中…' : '选择目录'}
+            {loading ? t('common.loading') : t('local.pickFolder')}
           </button>
         </div>
       </div>
@@ -95,23 +97,23 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
           onClick={() => void browser.pick()}
         >
           <IconFolderOpen size={14} />
-          选择目录
+          {t('local.pickFolder')}
         </button>
         <button
           type="button"
           className="btn btn--ghost btn--sm"
           disabled={loading || !listing.parent}
-          title={listing.parent ? `返回 ${listing.parent}` : '已经是根目录'}
+          title={listing.parent ? t('common.back', { path: listing.parent }) : t('common.alreadyRoot')}
           onClick={() => void browser.goParent()}
         >
           <IconArrowUp size={14} />
-          上级
+          {t('common.up')}
         </button>
         <button
           type="button"
           className="icon-btn icon-btn--sm"
           disabled={loading}
-          title="刷新"
+          title={t('common.refresh')}
           onClick={() => void browser.refresh()}
         >
           <IconRefresh size={15} />
@@ -125,12 +127,12 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
             checked={showHidden}
             onChange={(e) => browser.setShowHidden(e.target.checked)}
           />
-          <span>显示隐藏文件</span>
+          <span>{t('local.showHidden')}</span>
         </label>
       </div>
 
       {/* 面包屑 */}
-      <nav className="crumb" aria-label="路径">
+      <nav className="crumb" aria-label={listing.path}>
         {crumbs.map((crumb, index) =>
           crumb === 'ellipsis' ? (
             <span key={`gap-${index}`} className="crumb__gap">
@@ -154,22 +156,22 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
 
       {listing.truncated && (
         <p className="browser__warn">
-          目录条目过多，仅显示前 {listing.entries.length} 项（共 {listing.total} 项）
+          {t('local.truncated', { shown: listing.entries.length, total: listing.total })}
         </p>
       )}
 
       {/* 列表 */}
       <div className="browser__list">
-        {loading && <div className="browser__loading">读取中…</div>}
+        {loading && <div className="browser__loading">{t('common.loading')}</div>}
 
         {!loading && dirs.length === 0 && files.length === 0 && (
-          <div className="browser__empty-hint">这个目录是空的</div>
+          <div className="browser__empty-hint">{t('local.emptyDir')}</div>
         )}
 
         {dirs.length > 0 && (
           <>
             <div className="browser__group">
-              目录
+              {t('local.groupDirs')}
               <b>{dirs.length}</b>
             </div>
             {dirs.map((entry) => (
@@ -185,11 +187,11 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
                 </span>
                 <span className="entry__name">{entry.name}</span>
                 {entry.isSymbolicLink && (
-                  <span className="entry__badge" title="软链接">
+                  <span className="entry__badge" title={t('local.symlink')}>
                     <IconLink size={11} />
                   </span>
                 )}
-                <span className="entry__meta">进入</span>
+                <span className="entry__meta">{t('common.enter')}</span>
                 <IconChevronRight size={14} />
               </button>
             ))}
@@ -199,7 +201,7 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
         {files.length > 0 && (
           <>
             <div className="browser__group">
-              文件
+              {t('local.groupFiles')}
               <b>{files.length}</b>
             </div>
             {files.map((entry) => {
@@ -227,13 +229,13 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
 
       {/* 底部操作 */}
       <div className="browser__actions">
-        <label className="checkbox" title="「添加当前目录文件」时是否一并包含子目录里的文件">
+        <label className="checkbox" title={t('local.includeSubTitle')}>
           <input
             type="checkbox"
             checked={recursive}
             onChange={(e) => browser.setRecursive(e.target.checked)}
           />
-          <span>包含子目录</span>
+          <span>{t('local.includeSub')}</span>
         </label>
 
         <button
@@ -244,7 +246,7 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
             allSelected ? browser.clearSelection() : browser.selectAll(allFilePaths)
           }
         >
-          {allSelected ? '取消全选' : `全选文件 (${files.length})`}
+          {allSelected ? t('local.deselectAll') : t('local.selectAll', { n: files.length })}
         </button>
 
         {selectedCount > 0 && (
@@ -253,7 +255,7 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
             className="btn btn--ghost btn--sm"
             onClick={browser.clearSelection}
           >
-            清空选择
+            {t('local.clearSelection')}
           </button>
         )}
 
@@ -272,7 +274,7 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
             onAdd(res.data)
           }}
         >
-          添加{recursive ? '（含子目录）' : '当前目录'}文件
+          {recursive ? t('local.addRecursive') : t('local.addCurrent')}
         </button>
 
         <button
@@ -282,7 +284,8 @@ export function DirectoryBrowser({ browser, onAdd }: DirectoryBrowserProps) {
           onClick={() => onAdd(Array.from(selected))}
         >
           <IconUpload size={14} />
-          添加选中{selectedCount > 0 ? ` (${selectedCount})` : ''}
+          {t('local.addSelected')}
+          {selectedCount > 0 ? ` (${selectedCount})` : ''}
         </button>
       </div>
     </div>

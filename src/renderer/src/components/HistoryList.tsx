@@ -1,4 +1,5 @@
 import type { HistoryEntry } from '@shared/types'
+import { useI18n } from '../lib/i18n'
 import { formatBytes, formatRelativeTime, truncateMiddle } from '../lib/utils'
 import { IconCopy, IconExternal, IconFile, IconHistory, IconImage, IconTrash } from './Icons'
 
@@ -15,12 +16,14 @@ function urlOf(entry: HistoryEntry): string {
 }
 
 export function HistoryList({ entries, onCopy, onOpen, onRemove, onClear }: HistoryListProps) {
+  const { t, locale } = useI18n()
+
   if (entries.length === 0) {
     return (
       <div className="empty">
         <IconHistory size={28} />
-        <p>暂无上传记录</p>
-        <span>成功上传的文件会保存在这里，最多 300 条</span>
+        <p>{t('history.empty')}</p>
+        <span>{t('history.emptyHint')}</span>
       </div>
     )
   }
@@ -28,10 +31,10 @@ export function HistoryList({ entries, onCopy, onOpen, onRemove, onClear }: Hist
   return (
     <div className="history">
       <div className="history__bar">
-        <span>共 {entries.length} 条记录</span>
+        <span>{t('history.count', { n: entries.length })}</span>
         <button type="button" className="btn btn--ghost btn--sm" onClick={onClear}>
           <IconTrash size={14} />
-          清空记录
+          {t('history.clear')}
         </button>
       </div>
 
@@ -55,7 +58,9 @@ export function HistoryList({ entries, onCopy, onOpen, onRemove, onClear }: Hist
                   <span className="queue-row__name" title={entry.name}>
                     {entry.name}
                   </span>
-                  <span className="queue-row__time">{formatRelativeTime(entry.uploadedAt)}</span>
+                  <span className="queue-row__time">
+                    {formatRelativeTime(entry.uploadedAt, t, locale)}
+                  </span>
                 </div>
                 <button type="button" className="link-btn" onClick={() => onCopy(url)} title={url}>
                   {truncateMiddle(url, 62)}
@@ -68,13 +73,13 @@ export function HistoryList({ entries, onCopy, onOpen, onRemove, onClear }: Hist
               </div>
 
               <div className="queue-row__actions">
-                <button type="button" className="icon-btn icon-btn--sm" title="复制链接" onClick={() => onCopy(url)}>
+                <button type="button" className="icon-btn icon-btn--sm" title={t('common.copyLink')} onClick={() => onCopy(url)}>
                   <IconCopy size={15} />
                 </button>
-                <button type="button" className="icon-btn icon-btn--sm" title="在浏览器打开" onClick={() => onOpen(url)}>
+                <button type="button" className="icon-btn icon-btn--sm" title={t('common.openInBrowser')} onClick={() => onOpen(url)}>
                   <IconExternal size={15} />
                 </button>
-                <button type="button" className="icon-btn icon-btn--sm" title="删除记录" onClick={() => onRemove(entry.id)}>
+                <button type="button" className="icon-btn icon-btn--sm" title={t('common.deleteRecord')} onClick={() => onRemove(entry.id)}>
                   <IconTrash size={15} />
                 </button>
               </div>

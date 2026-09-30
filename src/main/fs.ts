@@ -2,6 +2,7 @@ import { readdir, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join } from 'node:path'
 import type { DirEntry, DirListing, PathClassification } from '@shared/types'
 import { mimeFor } from './mime'
+import { mainLocale, mainT } from './lang'
 
 /** 单次列目录最多返回的条目数，避免超大目录卡住渲染 */
 const MAX_ENTRIES = 3000
@@ -38,22 +39,22 @@ function isHiddenName(name: string): boolean {
 }
 
 function assertAbsolute(dirPath: string): void {
-  if (!dirPath || !isAbsolute(dirPath)) throw new Error('只能浏览绝对路径')
+  if (!dirPath || !isAbsolute(dirPath)) throw new Error(mainT('error.absoluteOnly'))
 }
 
-/** 把系统级的 fs 错误翻译成用户看得懂的中文提示 */
+/** 把系统级的 fs 错误翻译成用户看得懂的提示 */
 function friendlyFsError(err: unknown, target: string): Error {
   const code = (err as NodeJS.ErrnoException)?.code
   switch (code) {
     case 'ENOENT':
-      return new Error(`路径不存在：${target}`)
+      return new Error(mainT('error.notFound', { path: target }))
     case 'EACCES':
     case 'EPERM':
-      return new Error(`没有权限访问：${target}`)
+      return new Error(mainT('error.noPermission', { path: target }))
     case 'ENOTDIR':
-      return new Error('该路径不是目录')
+      return new Error(mainT('error.notDirectory'))
     case 'ELOOP':
-      return new Error('软链接循环，无法读取该目录')
+      return new Error(mainT('error.symlinkLoop'))
     default:
       return err instanceof Error ? err : new Error(String(err))
   }
@@ -66,7 +67,7 @@ export async function listDirectory(dirPath: string): Promise<DirListing> {
   const info = await stat(dirPath).catch((err: unknown) => {
     throw friendlyFsError(err, dirPath)
   })
-  if (!info.isDirectory()) throw new Error('该路径不是目录')
+  if (!info.isDirectory()) throw new Error(mainT('error.notDirectory'))
 
   const dirents = await readdir(dirPath, { withFileTypes: true }).catch((err: unknown) => {
     throw friendlyFsError(err, dirPath)
@@ -99,7 +100,7 @@ export async function listDirectory(dirPath: string): Promise<DirListing> {
   const list = entries.filter((e): e is DirEntry => e !== null)
   list.sort((a, b) => {
     if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
-    return a.name.localeCompare(b.name, 'zh-CN', { numeric: true, sensitivity: 'base' })
+    return a.name.localeCompare(b.name, mainLocale(), { numeric: true, sensitivity: 'base' })
   })
 
   const parent = dirname(dirPath)
@@ -125,7 +126,7 @@ export async function collectFiles(
   const info = await stat(dirPath).catch((err: unknown) => {
     throw friendlyFsError(err, dirPath)
   })
-  if (!info.isDirectory()) throw new Error('该路径不是目录')
+  if (!info.isDirectory()) throw new Error(mainT('error.notDirectory'))
 
   const found: string[] = []
   const pending: string[] = [dirPath]

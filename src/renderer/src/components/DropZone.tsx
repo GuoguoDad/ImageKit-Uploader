@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useT } from '../lib/i18n'
 import { cn } from '../lib/utils'
 import { IconFolderOpen, IconUpload } from './Icons'
 
@@ -12,6 +13,7 @@ interface DropZoneProps {
 
 /** 拖拽 / 点击 / 粘贴 三种方式添加文件，也可直接挑一个目录去浏览 */
 export function DropZone({ disabled, busy, onPick, onPickFolder, onFiles }: DropZoneProps) {
+  const t = useT()
   const [active, setActive] = useState(false)
   const depth = useRef(0)
 
@@ -62,19 +64,21 @@ export function DropZone({ disabled, busy, onPick, onPickFolder, onFiles }: Drop
         <IconUpload size={26} />
       </span>
       <div className="dropzone__text">
-        <strong>{busy ? '正在读取文件…' : '拖拽文件或文件夹到这里'}</strong>
+        <strong>{busy ? t('drop.reading') : t('drop.title')}</strong>
         <span>
-          或点击选择文件 · 支持 <kbd>⌘/Ctrl</kbd> + <kbd>V</kbd> 粘贴剪贴板图片
+          {t('drop.hintPrefix')}
+          <kbd>{t('drop.hintShortcut')}</kbd>
+          {t('drop.hintSuffix')}
         </span>
       </div>
 
       <div className="dropzone__actions">
         <button type="button" className="btn btn--sm" onClick={stop(onPick)}>
-          选择文件
+          {t('drop.pickFile')}
         </button>
         <button type="button" className="btn btn--sm" onClick={stop(onPickFolder)}>
           <IconFolderOpen size={14} />
-          选择文件夹
+          {t('drop.pickFolder')}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DEFAULT_LANGUAGE, createTranslator, isCanceledMessage, type Language } from '@shared/i18n'
 import type {
   AppConfig,
   AppInfo,
@@ -27,6 +28,7 @@ import {
 import { useDirectoryBrowser } from './hooks/useDirectoryBrowser'
 import { useRemoteBrowser } from './hooks/useRemoteBrowser'
 import { useToasts } from './hooks/useToasts'
+import { I18nProvider } from './lib/i18n'
 import { applyTheme, watchSystemTheme, type ThemeMode } from './lib/theme'
 import { cn, copyText, joinCdnUrl, normalizeRemotePath, uid } from './lib/utils'
 
@@ -49,9 +51,14 @@ export default function App() {
   const [reading, setReading] = useState(false)
   const [remotePickerOpen, setRemotePickerOpen] = useState(false)
 
+  // 界面语言来自配置，默认英文；App 自身在 Provider 之上，因此在这里本地取一份 t
+  const lang: Language = config?.language ?? DEFAULT_LANGUAGE
+  const t = useMemo(() => createTranslator(lang), [lang])
+  const locale = lang === 'zh' ? 'zh-CN' : 'en'
+
   const { toasts, push, dismiss } = useToasts()
   const browser = useDirectoryBrowser(push)
-  const remote = useRemoteBrowser(push)
+  const remote = useRemoteBrowser(push, { t, locale })
   const remoteRef = useRef(remote)
   const openDirectory = browser.open
 
@@ -105,7 +112,7 @@ export default function App() {
     })()
   }, [syncConfig])
 
-  /* ------------------------------ 主题 ------------------------------ */
+  /* ------------------------------ 主题 / 语言 ------------------------------ */
 
   const themeMode: ThemeMode = config?.theme ?? 'dark'
 
@@ -114,6 +121,11 @@ export default function App() {
     if (themeMode !== 'system') return
     return watchSystemTheme(() => applyTheme('system'))
   }, [themeMode])
+
+  // 让 <html lang> 跟着界面语言走（影响断行、拼写、无障碍朗读）
+  useEffect(() => {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'
+  }, [lang])
 
   const handleCycleTheme = useCallback(() => {
     const idx = THEME_CYCLE.indexOf(themeMode)
@@ -126,6 +138,21 @@ export default function App() {
     })
     void window.api.config.save({ theme: next })
   }, [themeMode])
+
+  /** 切换界面语言：立即生效并写入配置，下次启动沿用 */
+  const handleLanguageChange = useCallback((next: Language) => {
+    setConfig((prev) => {
+      if (!prev || prev.language === next) return prev
+      const updated = { ...prev, language: next }
+      configRef.current = updated
+      return updated
+    })
+    void window.api.config.save({ language: next })
+  }, [])
+
+  const handleToggleLanguage = useCallback(() => {
+    handleLanguageChange(lang === 'en' ? 'zh' : 'en')
+  }, [handleLanguageChange, lang])
 
   /* ------------------------------ 上传进度 ------------------------------ */
 
@@ -197,9 +224,9 @@ export default function App() {
               await openDirectory(dirs[0])
               setTab('browser')
               if (dirs.length > 1) {
-                push('info', `一次拖入了 ${dirs.length} 个目录，已打开第一个`)
+                push('info', t('toast.dirsDropped', { n: dirs.length }))
               } else if (filePaths.length === 0) {
-                push('info', `已打开目录：${dirs[0]}`)
+                push('info', t('toast.dirOpened', { path: dirs[0] }))
               }
             }
 
@@ -222,7 +249,7 @@ export default function App() {
 
         if (metas.length === 0) {
           if (rawPaths.length === 0 && blobs.length === 0) {
-            push('info', '没有识别到可上传的文件')
+            push('info', t('toast.noUploadable'))
           }
           return
         }
@@ -233,7 +260,7 @@ export default function App() {
         setReading(false)
       }
     },
-    [appendMetas, openDirectory, push]
+    [appendMetas, openDirectory, push, t]
   )
 
   const handlePick = useCallback(async () => {
@@ -262,7 +289,7 @@ export default function App() {
   const handleAddPaths = useCallback(
     async (paths: string[]) => {
       if (paths.length === 0) {
-        push('info', '没有可添加的文件')
+        push('info', t('toast.nothingToAdd'))
         return
       }
       setReading(true)
@@ -273,17 +300,17 @@ export default function App() {
           return
         }
         if (res.data.length === 0) {
-          push('info', '没有可添加的文件')
+          push('info', t('toast.nothingToAdd'))
           return
         }
         appendMetas(res.data)
-        push('success', `已添加 ${res.data.length} 个文件到队列`)
+        push('success', t('toast.added', { n: res.data.length }))
         setTab('queue')
       } finally {
         setReading(false)
       }
     },
-    [appendMetas, push]
+    [appendMetas, push, t]
   )
 
   const handleAddSelected = useCallback(
@@ -322,11 +349,11 @@ export default function App() {
         setQueue((prev) =>
           prev.map((i) =>
             i.id === item.id
-              ? { ...i, status: 'error', error: '未配置 Public Key / Private Key' }
+              ? { ...i, status: 'error', error: t('toast.missingKeys') }
               : i
           )
         )
-        push('error', '请先在「设置」中填写 ImageKit 凭证')
+        push('error', t('toast.fillCredentials'))
         setSettingsOpen(true)
         return
       }
@@ -362,13 +389,13 @@ export default function App() {
               : i
           )
         )
-        push('success', `${item.name} 上传成功`)
+        push('success', t('toast.uploaded', { name: item.name }))
         const hist = await window.api.history.list()
         if (hist.ok) setHistory(hist.data)
         // 上传成功后刷新云端目录，让新文件立刻出现在列表里
         if (remoteRef.current.listing) void remoteRef.current.refresh({ silent: true })
       } else {
-        const canceled = res.error.includes('已取消')
+        const canceled = isCanceledMessage(res.error)
         setQueue((prev) =>
           prev.map((i) =>
             i.id === item.id
@@ -376,10 +403,10 @@ export default function App() {
               : i
           )
         )
-        if (!canceled) push('error', `${item.name}：${res.error}`)
+        if (!canceled) push('error', t('toast.uploadFailed', { name: item.name, error: res.error }))
       }
     },
-    [push]
+    [push, t]
   )
 
   // 并发调度：有空闲槽位时自动启动排队中的任务
@@ -443,9 +470,9 @@ export default function App() {
             ? `![${item.name}](${url})`
             : `<img src="${url}" alt="${item.name}" />`
       const done = await copyText(text)
-      push(done ? 'success' : 'error', done ? '已复制到剪贴板' : '复制失败，请手动复制')
+      push(done ? 'success' : 'error', done ? t('common.copied') : t('common.copyFailed'))
     },
-    [push]
+    [push, t]
   )
 
   const handleCopyAll = useCallback(async () => {
@@ -454,19 +481,19 @@ export default function App() {
       .map((i) => i.result?.cdnUrl || i.result?.url)
       .filter((u): u is string => Boolean(u))
     if (urls.length === 0) {
-      push('info', '还没有上传成功的文件')
+      push('info', t('toast.noUploadsYet'))
       return
     }
     const done = await copyText(urls.join('\n'))
-    push(done ? 'success' : 'error', done ? `已复制 ${urls.length} 条链接` : '复制失败')
-  }, [push])
+    push(done ? 'success' : 'error', done ? t('toast.copiedLinks', { n: urls.length }) : t('common.copyFailedShort'))
+  }, [push, t])
 
   const handleCopyOne = useCallback(
     async (url: string) => {
       const done = await copyText(url)
-      push(done ? 'success' : 'error', done ? '已复制到剪贴板' : '复制失败')
+      push(done ? 'success' : 'error', done ? t('common.copied') : t('common.copyFailedShort'))
     },
-    [push]
+    [push, t]
   )
 
   const handleOpenUrl = useCallback((url: string) => {
@@ -488,9 +515,9 @@ export default function App() {
     const res = await window.api.history.clear()
     if (res.ok) {
       setHistory(res.data)
-      push('success', '已清空历史记录')
+      push('success', t('toast.historyCleared'))
     }
-  }, [push])
+  }, [push, t])
 
   /* ------------------------------ 设置 ------------------------------ */
 
@@ -508,9 +535,9 @@ export default function App() {
           ? { ...prev, configured: Boolean(res.data.publicKey && res.data.privateKey) }
           : prev
       )
-      push('success', '配置已保存')
+      push('success', t('toast.configSaved'))
     },
-    [push, syncConfig]
+    [push, syncConfig, t]
   )
 
   const handleReloadConfig = useCallback(async () => {
@@ -524,8 +551,8 @@ export default function App() {
     setAppInfo((prev) =>
       prev ? { ...prev, configured: Boolean(res.data.publicKey && res.data.privateKey) } : prev
     )
-    push('success', '已重新加载配置文件')
-  }, [push, syncConfig])
+    push('success', t('toast.configReloaded'))
+  }, [push, syncConfig, t])
 
   const handleTest = useCallback(async (): Promise<string> => {
     const res = await window.api.ik.test()
@@ -566,17 +593,17 @@ export default function App() {
       const next = normalizeRemotePath(path)
       if (normalizeRemotePath(options.folder) === next) return
       handleOptionsChange({ folder: next })
-      push('success', `上传目标目录已设为 ${next}`)
+      push('success', t('toast.targetSet', { path: next }))
     },
-    [handleOptionsChange, options.folder, push]
+    [handleOptionsChange, options.folder, push, t]
   )
 
   const handleCopyText = useCallback(
     async (text: string, label: string) => {
       const done = await copyText(text)
-      push(done ? 'success' : 'error', done ? `已复制 ${label} 链接` : '复制失败，请手动复制')
+      push(done ? 'success' : 'error', done ? t('toast.copiedLabel', { label }) : t('common.copyFailed'))
     },
-    [push]
+    [push, t]
   )
 
   const handleRemotePicked = useCallback(
@@ -598,198 +625,204 @@ export default function App() {
   }, [tab, configured, remote.listing, remote.loading, remote.open])
 
   return (
-    <div className="app">
-      <Header
-        name={config?.name || 'ImageKit Uploader'}
-        appInfo={appInfo}
-        themeMode={themeMode}
-        onCycleTheme={handleCycleTheme}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
-
-      {config && !configured && (
-        <div className="banner">
-          <span>还没有配置 ImageKit 凭证，上传前请先填写 Public Key 与 Private Key。</span>
-          <button type="button" className="btn btn--primary btn--sm" onClick={() => setSettingsOpen(true)}>
-            立即配置
-          </button>
-        </div>
-      )}
-
-      <main className="app-main">
-        <DropZone
-          disabled={busy}
-          busy={busy}
-          onPick={handlePick}
-          onPickFolder={handlePickFolder}
-          onFiles={addFiles}
+    <I18nProvider lang={lang}>
+      <div className="app">
+        <Header
+          name={config?.name || 'ImageKit Uploader'}
+          appInfo={appInfo}
+          themeMode={themeMode}
+          lang={lang}
+          onCycleTheme={handleCycleTheme}
+          onToggleLanguage={handleToggleLanguage}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
 
-        <OptionsBar
-          options={options}
-          concurrency={concurrency}
-          disabled={busy}
-          onBrowseRemote={() => {
-            if (!configured) {
-              push('info', '请先在「设置」中填写 ImageKit 凭证')
-              setSettingsOpen(true)
-              return
-            }
-            setRemotePickerOpen(true)
-          }}
-          onChange={handleOptionsChange}
-          onConcurrencyChange={handleConcurrencyChange}
-        />
+        {config && !configured && (
+          <div className="banner">
+            <span>{t('app.banner')}</span>
+            <button type="button" className="btn btn--primary btn--sm" onClick={() => setSettingsOpen(true)}>
+              {t('app.configureNow')}
+            </button>
+          </div>
+        )}
 
-        <section className="panel">
-          <div className="panel__head">
-            <div className="tabs">
-              <button
-                type="button"
-                className={cn('tab', tab === 'queue' && 'tab--active')}
-                onClick={() => setTab('queue')}
-              >
-                <IconUpload size={15} />
-                上传队列
-                {queue.length > 0 && <b>{queue.length}</b>}
-              </button>
-              <button
-                type="button"
-                className={cn('tab', tab === 'history' && 'tab--active')}
-                onClick={() => setTab('history')}
-              >
-                <IconHistory size={15} />
-                历史记录
-                {history.length > 0 && <b>{history.length}</b>}
-              </button>
-              <button
-                type="button"
-                className={cn('tab', tab === 'browser' && 'tab--active')}
-                onClick={() => setTab('browser')}
-              >
-                <IconFolder size={15} />
-                本地目录
-                {browser.listing && <b>{browser.listing.total}</b>}
-              </button>
-              <button
-                type="button"
-                className={cn('tab', tab === 'remote' && 'tab--active')}
-                onClick={() => setTab('remote')}
-              >
-                <IconCloud size={15} />
-                云端目录
-                {remote.listing && <b>{remote.folders.length + remote.listing.files.length}</b>}
-              </button>
-            </div>
+        <main className="app-main">
+          <DropZone
+            disabled={busy}
+            busy={busy}
+            onPick={handlePick}
+            onPickFolder={handlePickFolder}
+            onFiles={addFiles}
+          />
 
-            {tab === 'queue' && queue.length > 0 && (
-              <div className="panel__tools">
-                <button type="button" className="btn btn--ghost btn--sm" onClick={handleUploadAll}>
-                  <IconUpload size={14} />
-                  全部上传
+          <OptionsBar
+            options={options}
+            concurrency={concurrency}
+            disabled={busy}
+            onBrowseRemote={() => {
+              if (!configured) {
+                push('info', t('toast.fillCredentials'))
+                setSettingsOpen(true)
+                return
+              }
+              setRemotePickerOpen(true)
+            }}
+            onChange={handleOptionsChange}
+            onConcurrencyChange={handleConcurrencyChange}
+          />
+
+          <section className="panel">
+            <div className="panel__head">
+              <div className="tabs">
+                <button
+                  type="button"
+                  className={cn('tab', tab === 'queue' && 'tab--active')}
+                  onClick={() => setTab('queue')}
+                >
+                  <IconUpload size={15} />
+                  {t('app.tab.queue')}
+                  {queue.length > 0 && <b>{queue.length}</b>}
                 </button>
-                <button type="button" className="btn btn--ghost btn--sm" onClick={handleCopyAll}>
-                  复制全部链接
+                <button
+                  type="button"
+                  className={cn('tab', tab === 'history' && 'tab--active')}
+                  onClick={() => setTab('history')}
+                >
+                  <IconHistory size={15} />
+                  {t('app.tab.history')}
+                  {history.length > 0 && <b>{history.length}</b>}
                 </button>
-                <button type="button" className="btn btn--ghost btn--sm" onClick={handleClearDone}>
-                  <IconClose size={14} />
-                  清除已完成
+                <button
+                  type="button"
+                  className={cn('tab', tab === 'browser' && 'tab--active')}
+                  onClick={() => setTab('browser')}
+                >
+                  <IconFolder size={15} />
+                  {t('app.tab.local')}
+                  {browser.listing && <b>{browser.listing.total}</b>}
+                </button>
+                <button
+                  type="button"
+                  className={cn('tab', tab === 'remote' && 'tab--active')}
+                  onClick={() => setTab('remote')}
+                >
+                  <IconCloud size={15} />
+                  {t('app.tab.remote')}
+                  {remote.listing && <b>{remote.folders.length + remote.listing.files.length}</b>}
                 </button>
               </div>
+
+              {tab === 'queue' && queue.length > 0 && (
+                <div className="panel__tools">
+                  <button type="button" className="btn btn--ghost btn--sm" onClick={handleUploadAll}>
+                    <IconUpload size={14} />
+                    {t('app.tool.uploadAll')}
+                  </button>
+                  <button type="button" className="btn btn--ghost btn--sm" onClick={handleCopyAll}>
+                    {t('app.tool.copyAllLinks')}
+                  </button>
+                  <button type="button" className="btn btn--ghost btn--sm" onClick={handleClearDone}>
+                    <IconClose size={14} />
+                    {t('app.tool.clearDone')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className={cn('panel__body', (tab === 'browser' || tab === 'remote') && 'panel__body--flush')}>
+              {tab === 'queue' && (
+                <QueueList
+                  items={queue}
+                  onUpload={handleRetry}
+                  onCancel={handleCancel}
+                  onRetry={handleRetry}
+                  onRemove={handleRemove}
+                  onCopy={handleCopy}
+                  onOpen={handleOpenUrl}
+                  onReveal={handleReveal}
+                />
+              )}
+
+              {tab === 'history' && (
+                <HistoryList
+                  entries={history}
+                  onCopy={handleCopyOne}
+                  onOpen={handleOpenUrl}
+                  onRemove={handleRemoveHistory}
+                  onClear={handleClearHistory}
+                />
+              )}
+
+              {tab === 'browser' && (
+                <DirectoryBrowser browser={browser} onAdd={handleAddSelected} />
+              )}
+
+              {tab === 'remote' && (
+                <RemoteBrowser
+                  browser={remote}
+                  configured={configured}
+                  targetFolder={options.folder}
+                  onSelectTarget={handleSelectRemoteTarget}
+                  onCopy={handleCopyText}
+                  onOpenUrl={handleOpenUrl}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                />
+              )}
+            </div>
+          </section>
+        </main>
+
+        <footer className="app-foot">
+          <span>
+            {t('app.foot.queue', { total: stats.total })}
+            {stats.waiting > 0 && t('app.foot.waiting', { n: stats.waiting })}
+            {stats.running > 0 && t('app.foot.running', { n: stats.running })}
+            {stats.done > 0 && t('app.foot.done', { n: stats.done })}
+            {stats.failed > 0 && t('app.foot.failed', { n: stats.failed })}
+          </span>
+          <span className="app-foot__right">
+            {stats.done > 0 && (
+              <span className="foot-ok">
+                <IconCheck size={13} />
+                {t('app.foot.uploaded', { n: stats.done })}
+              </span>
             )}
-          </div>
+            <button
+              type="button"
+              className="link-btn link-btn--sm"
+              title={configPath}
+              onClick={() => void window.api.config.openFile()}
+            >
+              {t('app.foot.configFile')}
+            </button>
+          </span>
+        </footer>
 
-          <div className={cn('panel__body', (tab === 'browser' || tab === 'remote') && 'panel__body--flush')}>
-            {tab === 'queue' && (
-              <QueueList
-                items={queue}
-                onUpload={handleRetry}
-                onCancel={handleCancel}
-                onRetry={handleRetry}
-                onRemove={handleRemove}
-                onCopy={handleCopy}
-                onOpen={handleOpenUrl}
-                onReveal={handleReveal}
-              />
-            )}
+        {config && (
+          <SettingsModal
+            open={settingsOpen}
+            config={config}
+            configPath={configPath}
+            language={lang}
+            onClose={() => setSettingsOpen(false)}
+            onSave={handleSaveConfig}
+            onReload={handleReloadConfig}
+            onOpenConfigFile={() => void window.api.config.openFile()}
+            onTest={handleTest}
+            onLanguageChange={handleLanguageChange}
+          />
+        )}
 
-            {tab === 'history' && (
-              <HistoryList
-                entries={history}
-                onCopy={handleCopyOne}
-                onOpen={handleOpenUrl}
-                onRemove={handleRemoveHistory}
-                onClear={handleClearHistory}
-              />
-            )}
-
-            {tab === 'browser' && (
-              <DirectoryBrowser browser={browser} onAdd={handleAddSelected} />
-            )}
-
-            {tab === 'remote' && (
-              <RemoteBrowser
-                browser={remote}
-                configured={configured}
-                targetFolder={options.folder}
-                onSelectTarget={handleSelectRemoteTarget}
-                onCopy={handleCopyText}
-                onOpenUrl={handleOpenUrl}
-                onOpenSettings={() => setSettingsOpen(true)}
-              />
-            )}
-          </div>
-        </section>
-      </main>
-
-      <footer className="app-foot">
-        <span>
-          队列 {stats.total}
-          {stats.waiting > 0 && ` · 等待 ${stats.waiting}`}
-          {stats.running > 0 && ` · 上传中 ${stats.running}`}
-          {stats.done > 0 && ` · 成功 ${stats.done}`}
-          {stats.failed > 0 && ` · 失败 ${stats.failed}`}
-        </span>
-        <span className="app-foot__right">
-          {stats.done > 0 && (
-            <span className="foot-ok">
-              <IconCheck size={13} />
-              本次已上传 {stats.done} 个
-            </span>
-          )}
-          <button
-            type="button"
-            className="link-btn link-btn--sm"
-            title={configPath}
-            onClick={() => void window.api.config.openFile()}
-          >
-            配置文件
-          </button>
-        </span>
-      </footer>
-
-      {config && (
-        <SettingsModal
-          open={settingsOpen}
-          config={config}
-          configPath={configPath}
-          onClose={() => setSettingsOpen(false)}
-          onSave={handleSaveConfig}
-          onReload={handleReloadConfig}
-          onOpenConfigFile={() => void window.api.config.openFile()}
-          onTest={handleTest}
+        <RemoteFolderPicker
+          open={remotePickerOpen}
+          value={options.folder}
+          push={push}
+          onClose={() => setRemotePickerOpen(false)}
+          onConfirm={handleRemotePicked}
         />
-      )}
 
-      <RemoteFolderPicker
-        open={remotePickerOpen}
-        value={options.folder}
-        push={push}
-        onClose={() => setRemotePickerOpen(false)}
-        onConfirm={handleRemotePicked}
-      />
-
-      <Toasts toasts={toasts} onDismiss={dismiss} />
-    </div>
+        <Toasts toasts={toasts} onDismiss={dismiss} />
+      </div>
+    </I18nProvider>
   )
 }

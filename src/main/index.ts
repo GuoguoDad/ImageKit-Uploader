@@ -37,6 +37,7 @@ import {
 import { addHistory, clearHistory, loadHistory, removeHistory } from './history'
 import { classifyPaths, collectFiles, listDirectory, mapLimit } from './fs'
 import { isImageMime, mimeFor } from './mime'
+import { mainT } from './lang'
 
 /** 正在进行的上传任务：requestId -> abort 回调 */
 const activeUploads = new Map<string, () => void>()
@@ -232,11 +233,11 @@ function registerIpc(): void {
         const win = BrowserWindow.fromWebContents(e.sender)
         const result = win
           ? await dialog.showOpenDialog(win, {
-              title: '选择要上传的文件',
+              title: mainT('dialog.pickFiles'),
               properties: ['openFile', 'multiSelections'],
               filters: [
-                { name: '媒体文件', extensions: MEDIA_EXTENSIONS },
-                { name: '全部文件', extensions: ['*'] }
+                { name: mainT('dialog.mediaFiles'), extensions: MEDIA_EXTENSIONS },
+                { name: mainT('dialog.allFiles'), extensions: ['*'] }
               ]
             })
           : await dialog.showOpenDialog({
@@ -260,8 +261,8 @@ function registerIpc(): void {
       const win = BrowserWindow.fromWebContents(e.sender)
       const result = win
         ? await dialog.showOpenDialog(win, {
-            title: '选择要浏览的目录',
-            buttonLabel: '选择目录',
+            title: mainT('dialog.pickDirectory'),
+            buttonLabel: mainT('dialog.pickDirectoryButton'),
             properties: ['openDirectory', 'createDirectory']
           })
         : await dialog.showOpenDialog({ properties: ['openDirectory'] })
@@ -318,7 +319,7 @@ function registerIpc(): void {
         const target = join(dir, `${Date.now()}-${randomUUID().slice(0, 8)}${ext}`)
         await writeFile(target, Buffer.from(payload.buffer))
         const meta = await describeFile(target)
-        if (!meta) throw new Error('临时文件写入失败')
+        if (!meta) throw new Error(mainT('error.tempWriteFailed'))
         // 临时文件展示时用原始名称，上传时也用原始名称
         return ok({ ...meta, name: rawName })
       } catch (err) {
@@ -440,7 +441,7 @@ function registerIpc(): void {
   ipcMain.handle('shell:openExternal', async (_e, url: string): Promise<IpcResult<null>> => {
     try {
       const parsed = new URL(url)
-      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('仅支持打开 http/https 链接')
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error(mainT('error.onlyHttp'))
       await shell.openExternal(url)
       return ok(null)
     } catch (err) {

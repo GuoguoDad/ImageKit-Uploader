@@ -204,6 +204,26 @@ button:disabled {
   -webkit-app-region: no-drag;
 }
 
+/* 顶栏的语言快捷切换：显示当前语言，点击切到另一种 */
+.lang-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.lang-btn:hover {
+  background: var(--card-hover);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
 /* ------------------------------- 通用控件 ------------------------------- */
 
 .btn {
@@ -1390,6 +1410,41 @@ kbd {
   margin: 0;
   font-size: 11.5px;
   color: var(--text-mute);
+}
+
+/* 分段选择器：目前用于设置面板里的界面语言 */
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+}
+
+.segmented__item {
+  min-width: 92px;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 550;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segmented__item:hover:not(.segmented__item--active) {
+  background: var(--card-hover);
+  color: var(--text);
+}
+
+.segmented__item--active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 4px 12px var(--accent-soft);
 }
 
 .path-box {

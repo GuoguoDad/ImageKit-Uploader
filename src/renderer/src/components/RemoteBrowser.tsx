@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { RemoteFile, RemoteFolder } from '@shared/types'
 import type { RemoteBrowser as RemoteBrowserState } from '../hooks/useRemoteBrowser'
+import { useI18n } from '../lib/i18n'
 import {
   cn,
   collapseCrumbs,
@@ -34,10 +35,14 @@ export function RemoteBreadcrumbs({
   path: string
   onOpen: (path: string) => void
 }) {
-  const crumbs = useMemo(() => collapseCrumbs(remoteBreadcrumbs(path), 5), [path])
+  const { t } = useI18n()
+  const crumbs = useMemo(
+    () => collapseCrumbs(remoteBreadcrumbs(path, t('common.root')), 5),
+    [path, t]
+  )
 
   return (
-    <nav className="crumb" aria-label="云端路径">
+    <nav className="crumb" aria-label={path}>
       {crumbs.map((crumb, index) => {
         const isCurrent = index === crumbs.length - 1
         return crumb === 'ellipsis' ? (
@@ -97,12 +102,14 @@ function FolderRow({
   onSelect: () => void
   onEnter: () => void
 }) {
+  const { t } = useI18n()
+
   return (
     <div className={cn('entry', 'entry--dir', 'r-entry', isTarget && 'r-entry--target')}>
       <button
         type="button"
         className="r-entry__main"
-        title={`单击：把 ${folder.path} 设为上传目录 · 双击：进入该目录`}
+        title={t('remote.rowTitle', { path: folder.path })}
         onClick={onSelect}
         onDoubleClick={onEnter}
       >
@@ -113,22 +120,22 @@ function FolderRow({
       </button>
 
       {folder.pending && (
-        <span className="entry__badge" title="ImageKit 目录索引有延迟，稍后会自动同步">
-          同步中
+        <span className="entry__badge" title={t('remote.indexBadge')}>
+          {t('common.syncing')}
         </span>
       )}
 
       {isTarget && (
-        <span className="r-tag r-tag--target" title="当前上传目标目录">
+        <span className="r-tag r-tag--target" title={t('remote.isTargetTitle')}>
           <IconCheck size={11} />
-          上传目标
+          {t('remote.isTarget')}
         </span>
       )}
 
       <button
         type="button"
         className="icon-btn icon-btn--sm"
-        title={`进入 ${folder.path}`}
+        title={t('remote.rowOpenTitle', { path: folder.path })}
         onClick={onEnter}
       >
         <IconChevronRight size={14} />
@@ -159,6 +166,7 @@ export function RemoteBrowser({
   onOpenUrl,
   onOpenSettings
 }: RemoteBrowserProps) {
+  const { t, locale } = useI18n()
   const { listing, folders, loading, loadingMore, error } = browser
   const [newOpen, setNewOpen] = useState(false)
   const [newName, setNewName] = useState('')
@@ -194,8 +202,8 @@ export function RemoteBrowser({
       <div className="browser browser--empty">
         <div className="empty">
           <IconCloud size={30} />
-          <p>需要先配置 ImageKit 凭证</p>
-          <span>填写 Public Key 与 Private Key 后，才能读取云端目录与文件</span>
+          <p>{t('remote.needConfig')}</p>
+          <span>{t('remote.needConfigHint')}</span>
           <button
             type="button"
             className="btn btn--primary"
@@ -203,7 +211,7 @@ export function RemoteBrowser({
             onClick={onOpenSettings}
           >
             <IconSettings size={15} />
-            去配置
+            {t('common.configure')}
           </button>
         </div>
       </div>
@@ -216,8 +224,8 @@ export function RemoteBrowser({
       <div className="browser browser--empty">
         <div className="empty">
           <IconCloud size={30} />
-          <p>{error ? '读取云端目录失败' : '还没有打开云端目录'}</p>
-          <span>{error ?? '读取 ImageKit 上已有的目录和文件，并选择上传到哪个目录'}</span>
+          <p>{error ? t('remote.loadFailed') : t('remote.notOpened')}</p>
+          <span>{error ?? t('remote.introHint')}</span>
           {error && <span className="empty__error">{error}</span>}
           <button
             type="button"
@@ -226,7 +234,7 @@ export function RemoteBrowser({
             onClick={() => void browser.open('/')}
           >
             <IconFolderOpen size={15} />
-            打开根目录
+            {t('remote.openRoot')}
           </button>
         </div>
       </div>
@@ -241,11 +249,15 @@ export function RemoteBrowser({
           type="button"
           className="btn btn--ghost btn--sm"
           disabled={loading || !listing?.parent}
-          title={listing?.parent ? `返回 ${listing.parent}` : '已经是根目录'}
+          title={
+            listing?.parent
+              ? t('common.back', { path: listing.parent })
+              : t('common.alreadyRoot')
+          }
           onClick={() => void browser.goParent()}
         >
           <IconArrowUp size={14} />
-          上级
+          {t('common.up')}
         </button>
         <button
           type="button"
@@ -254,13 +266,13 @@ export function RemoteBrowser({
           onClick={() => void browser.goRoot()}
         >
           <IconHome size={14} />
-          根目录
+          {t('common.root')}
         </button>
         <button
           type="button"
           className="icon-btn icon-btn--sm"
           disabled={loading}
-          title="刷新"
+          title={t('common.refresh')}
           onClick={() => void browser.refresh()}
         >
           <IconRefresh size={15} />
@@ -272,12 +284,12 @@ export function RemoteBrowser({
           onClick={() => setNewOpen((v) => !v)}
         >
           <IconPlus size={14} />
-          新建目录
+          {t('common.newFolder')}
         </button>
 
         <div className="browser__spacer" />
 
-        <span className="r-target" title={`上传目标目录：${targetFolder}`}>
+        <span className="r-target" title={t('remote.targetTitle', { path: targetFolder })}>
           <IconTarget size={12} />
           {targetFolder || '/'}
         </span>
@@ -293,7 +305,7 @@ export function RemoteBrowser({
             value={newName}
             autoFocus
             spellCheck={false}
-            placeholder="新目录名，例如 banner"
+            placeholder={t('common.newFolderPlaceholder')}
             disabled={creating}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
@@ -310,7 +322,7 @@ export function RemoteBrowser({
             disabled={creating || !newName.trim()}
             onClick={() => void handleCreate()}
           >
-            {creating ? '创建中…' : '在当前位置创建'}
+            {creating ? t('common.creating') : t('common.create')}
           </button>
           <button
             type="button"
@@ -321,35 +333,34 @@ export function RemoteBrowser({
               setNewName('')
             }}
           >
-            取消
+            {t('common.cancel')}
           </button>
         </div>
       )}
 
       {pendingCount > 0 && (
-        <p className="browser__warn">
-          有 {pendingCount} 个目录正在等待 ImageKit 建立索引（通常几秒），已自动重试刷新。
-        </p>
+        <p className="browser__warn">{t('remote.pending', { n: pendingCount })}</p>
       )}
 
       {error && <p className="browser__warn">{error}</p>}
 
       {/* 列表 */}
       <div className="browser__list">
-        {loading && <div className="browser__loading">读取中…</div>}
+        {loading && <div className="browser__loading">{t('common.loading')}</div>}
 
         {!loading && folders.length === 0 && files.length === 0 && (
           <div className="browser__empty-hint">
-            这个云端目录是空的。可以直接把文件上传到 <code>{listing?.path}</code>
+            {t('remote.emptyDirHint')}
+            <code>{listing?.path}</code>
           </div>
         )}
 
         {!loading && folders.length > 0 && (
           <>
             <div className="browser__group">
-              子目录
+              {t('remote.groupFolders')}
               <b>{folders.length}</b>
-              <span className="browser__group-note">单击选中为上传目录 · 双击进入</span>
+              <span className="browser__group-note">{t('remote.groupNote')}</span>
             </div>
             {folders.map((folder) => (
               <FolderRow
@@ -366,9 +377,13 @@ export function RemoteBrowser({
         {!loading && files.length > 0 && (
           <>
             <div className="browser__group">
-              已上传文件
+              {t('remote.groupFiles')}
               <b>{files.length}</b>
-              {totalSize > 0 && <span className="browser__group-note">共 {formatBytes(totalSize)}</span>}
+              {totalSize > 0 && (
+                <span className="browser__group-note">
+                  {t('remote.totalSize', { size: formatBytes(totalSize) })}
+                </span>
+              )}
             </div>
             {files.map((file) => {
               const link = file.cdnUrl || file.url
@@ -386,8 +401,8 @@ export function RemoteBrowser({
                   </button>
 
                   {file.isPrivateFile && (
-                    <span className="entry__badge" title="私有文件，访问需要签名">
-                      私有
+                    <span className="entry__badge" title={t('remote.privateBadge')}>
+                      {t('common.private')}
                     </span>
                   )}
 
@@ -396,14 +411,14 @@ export function RemoteBrowser({
                   </span>
                   <span className="entry__meta">{formatBytes(file.size)}</span>
                   <span className="entry__meta">
-                    {file.createdAt ? formatRelativeTime(file.createdAt) : ''}
+                    {file.createdAt ? formatRelativeTime(file.createdAt, t, locale) : ''}
                   </span>
 
                   <span className="r-entry__actions">
                     <button
                       type="button"
                       className="icon-btn icon-btn--sm"
-                      title="复制链接"
+                      title={t('common.copyLink')}
                       onClick={() => onCopy(link, file.name)}
                     >
                       <IconCopy size={14} />
@@ -411,7 +426,7 @@ export function RemoteBrowser({
                     <button
                       type="button"
                       className="icon-btn icon-btn--sm"
-                      title="复制 Markdown"
+                      title={t('common.copyMarkdown')}
                       onClick={() => onCopy(`![${file.name}](${link})`, file.name)}
                     >
                       <b className="r-entry__md">MD</b>
@@ -419,7 +434,7 @@ export function RemoteBrowser({
                     <button
                       type="button"
                       className="icon-btn icon-btn--sm"
-                      title="在浏览器打开"
+                      title={t('common.openInBrowser')}
                       onClick={() => onOpenUrl(link)}
                     >
                       <IconExternal size={14} />
@@ -437,7 +452,7 @@ export function RemoteBrowser({
                   disabled={loadingMore}
                   onClick={() => void browser.loadMore()}
                 >
-                  {loadingMore ? '加载中…' : '加载更多文件'}
+                  {loadingMore ? t('common.loadingMore') : t('remote.loadMore')}
                 </button>
               </div>
             )}
@@ -447,9 +462,7 @@ export function RemoteBrowser({
 
       {/* 底部操作：当前所在目录一键设为上传目标 */}
       <div className="browser__actions">
-        <span className="browser__actions-hint">
-          上传目标：<code>{target}</code>
-        </span>
+        <span className="browser__actions-hint">{t('remote.targetValue', { path: target })}</span>
 
         <div className="browser__spacer" />
 
@@ -459,7 +472,7 @@ export function RemoteBrowser({
           disabled={!listing || rootIsTarget}
           onClick={() => onSelectTarget('/')}
         >
-          上传到根目录
+          {t('remote.uploadToRoot')}
         </button>
 
         <button
@@ -469,7 +482,9 @@ export function RemoteBrowser({
           onClick={() => listing && onSelectTarget(listing.path)}
         >
           <IconTarget size={14} />
-          {viewingIsTarget ? '当前就是上传目录' : `上传到 ${listing?.path}`}
+          {viewingIsTarget
+            ? t('remote.alreadyTarget')
+            : t('remote.uploadHere', { path: listing?.path ?? '/' })}
         </button>
       </div>
     </div>

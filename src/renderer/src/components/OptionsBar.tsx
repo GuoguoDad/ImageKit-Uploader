@@ -1,3 +1,4 @@
+import { useT } from '../lib/i18n'
 import { IconCloud, IconFolder, IconTag } from './Icons'
 
 export interface UploadOptions {
@@ -25,12 +26,14 @@ export function OptionsBar({
   onChange,
   onConcurrencyChange
 }: OptionsBarProps) {
+  const t = useT()
+
   return (
     <div className="options-bar">
       <div className="field field--inline field--grow">
         <IconFolder size={15} />
         <label className="field__label" htmlFor="opt-folder">
-          目录
+          {t('opt.folder')}
         </label>
         <input
           id="opt-folder"
@@ -46,40 +49,40 @@ export function OptionsBar({
             type="button"
             className="btn btn--ghost btn--sm field__btn"
             disabled={disabled}
-            title="浏览 ImageKit 上的目录并选择上传目标"
+            title={t('opt.browseTitle')}
             onClick={onBrowseRemote}
           >
             <IconCloud size={14} />
-            浏览
+            {t('opt.browse')}
           </button>
         )}
       </div>
 
       <label className="field field--inline">
         <IconTag size={15} />
-        <span className="field__label">标签</span>
+        <span className="field__label">{t('opt.tags')}</span>
         <input
           className="input"
           value={options.tags}
-          placeholder="逗号分隔，如 封面,banner"
+          placeholder={t('opt.tagsPlaceholder')}
           disabled={disabled}
           spellCheck={false}
           onChange={(e) => onChange({ tags: e.target.value })}
         />
       </label>
 
-      <label className="checkbox" title="同名文件自动追加随机后缀，避免覆盖">
+      <label className="checkbox" title={t('opt.uniqueTitle')}>
         <input
           type="checkbox"
           checked={options.useUniqueFileName}
           disabled={disabled}
           onChange={(e) => onChange({ useUniqueFileName: e.target.checked })}
         />
-        <span>唯一文件名</span>
+        <span>{t('opt.unique')}</span>
       </label>
 
-      <label className="field field--inline field--narrow" title="同时上传的任务数">
-        <span className="field__label">并发</span>
+      <label className="field field--inline field--narrow" title={t('opt.concurrencyTitle')}>
+        <span className="field__label">{t('opt.concurrency')}</span>
         <input
           className="input input--number"
           type="number"

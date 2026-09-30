@@ -1,5 +1,7 @@
+import { LANGUAGE_LABELS, type Language } from '@shared/i18n'
 import type { AppConfig } from '@shared/types'
 import { useEffect, useState } from 'react'
+import { useT } from '../lib/i18n'
 import { cn } from '../lib/utils'
 import { IconClose, IconExternal, IconRefresh } from './Icons'
 
@@ -7,11 +9,15 @@ interface SettingsModalProps {
   open: boolean
   config: AppConfig
   configPath: string
+  /** 当前界面语言 */
+  language: Language
   onClose: () => void
   onSave: (patch: Partial<AppConfig>) => Promise<void>
   onReload: () => void
   onOpenConfigFile: () => void
   onTest: (draft: Partial<AppConfig>) => Promise<string>
+  /** 切换界面语言（立即生效并持久化） */
+  onLanguageChange: (lang: Language) => void
 }
 
 interface DraftState {
@@ -46,12 +52,15 @@ export function SettingsModal({
   open,
   config,
   configPath,
+  language,
   onClose,
   onSave,
   onReload,
   onOpenConfigFile,
-  onTest
+  onTest,
+  onLanguageChange
 }: SettingsModalProps) {
+  const t = useT()
   const [draft, setDraft] = useState<DraftState>(() => toDraft(config))
   const [showSecret, setShowSecret] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -111,22 +120,46 @@ export function SettingsModal({
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal__head">
           <div>
-            <h2>设置</h2>
-            <p>凭证会写入本机配置文件，后期可直接编辑该文件调整</p>
+            <h2>{t('settings.title')}</h2>
+            <p>{t('settings.subtitle')}</p>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} title="关闭">
+          <button type="button" className="icon-btn" onClick={onClose} title={t('common.close')}>
             <IconClose size={17} />
           </button>
         </div>
 
         <div className="modal__body">
           <section className="form-section">
-            <h3 className="form-section__title">ImageKit 凭证</h3>
+            <h3 className="form-section__title">{t('settings.appearance')}</h3>
+
+            <div className="form-row">
+              <span className="form-row__label">
+                {t('language.label')}
+                <em>{t('language.hint')}</em>
+              </span>
+              <div className="segmented" role="group" aria-label={t('language.label')}>
+                {(Object.keys(LANGUAGE_LABELS) as Language[]).map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    className={cn('segmented__item', code === language && 'segmented__item--active')}
+                    aria-pressed={code === language}
+                    onClick={() => onLanguageChange(code)}
+                  >
+                    {LANGUAGE_LABELS[code]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="form-section">
+            <h3 className="form-section__title">{t('settings.credentials')}</h3>
 
             <label className="form-row">
               <span className="form-row__label">
                 Name
-                <em>工具显示名称 / 账号标识</em>
+                <em>{t('settings.nameHint')}</em>
               </span>
               <input
                 className="input"
@@ -155,7 +188,7 @@ export function SettingsModal({
             <label className="form-row">
               <span className="form-row__label">
                 Private Key
-                <em>仅保存在本机，用于生成上传签名</em>
+                <em>{t('settings.privateHint')}</em>
               </span>
               <div className="input-group">
                 <input
@@ -172,7 +205,7 @@ export function SettingsModal({
                   className="btn btn--ghost btn--sm"
                   onClick={() => setShowSecret((v) => !v)}
                 >
-                  {showSecret ? '隐藏' : '显示'}
+                  {showSecret ? t('settings.hide') : t('settings.show')}
                 </button>
               </div>
             </label>
@@ -180,7 +213,7 @@ export function SettingsModal({
             <label className="form-row">
               <span className="form-row__label">
                 URL Endpoint
-                <em>用于拼接最终访问链接</em>
+                <em>{t('settings.urlHint')}</em>
               </span>
               <input
                 className="input input--mono"
@@ -205,17 +238,17 @@ export function SettingsModal({
                 onClick={handleTest}
               >
                 <IconRefresh size={15} />
-                {testing ? '检测中…' : '保存并测试连接'}
+                {testing ? t('settings.testing') : t('settings.saveAndTest')}
               </button>
             </div>
           </section>
 
           <section className="form-section">
-            <h3 className="form-section__title">上传默认值</h3>
+            <h3 className="form-section__title">{t('settings.defaults')}</h3>
 
             <div className="form-grid">
               <label className="form-row">
-                <span className="form-row__label">默认目录</span>
+                <span className="form-row__label">{t('settings.defaultFolder')}</span>
                 <input
                   className="input"
                   value={draft.defaultFolder}
@@ -226,18 +259,18 @@ export function SettingsModal({
               </label>
 
               <label className="form-row">
-                <span className="form-row__label">默认标签</span>
+                <span className="form-row__label">{t('settings.defaultTags')}</span>
                 <input
                   className="input"
                   value={draft.defaultTags}
                   spellCheck={false}
-                  placeholder="逗号分隔"
+                  placeholder={t('settings.tagsPlaceholder')}
                   onChange={(e) => patch({ defaultTags: e.target.value })}
                 />
               </label>
 
               <label className="form-row">
-                <span className="form-row__label">并发上传数</span>
+                <span className="form-row__label">{t('settings.concurrency')}</span>
                 <input
                   className="input"
                   type="number"
@@ -249,23 +282,23 @@ export function SettingsModal({
               </label>
 
               <label className="form-row">
-                <span className="form-row__label">自定义上传端点</span>
+                <span className="form-row__label">{t('settings.customEndpoint')}</span>
                 <input
                   className="input input--mono"
                   value={draft.customEndpoint}
                   spellCheck={false}
-                  placeholder="留空使用官方端点"
+                  placeholder={t('settings.customEndpointPlaceholder')}
                   onChange={(e) => patch({ customEndpoint: e.target.value })}
                 />
               </label>
 
               <label className="form-row">
-                <span className="form-row__label">管理 API 地址</span>
+                <span className="form-row__label">{t('settings.apiEndpoint')}</span>
                 <input
                   className="input input--mono"
                   value={draft.apiEndpoint}
                   spellCheck={false}
-                  placeholder="留空使用 https://api.imagekit.io/v1"
+                  placeholder={t('settings.apiEndpointPlaceholder')}
                   onChange={(e) => patch({ apiEndpoint: e.target.value })}
                 />
               </label>
@@ -277,22 +310,22 @@ export function SettingsModal({
                 checked={draft.useUniqueFileName}
                 onChange={(e) => patch({ useUniqueFileName: e.target.checked })}
               />
-              <span>默认启用唯一文件名（避免同名覆盖）</span>
+              <span>{t('settings.uniqueDefault')}</span>
             </label>
           </section>
 
           <section className="form-section">
-            <h3 className="form-section__title">配置文件</h3>
-            <p className="form-hint">修改该文件并保存后，点击「重新加载配置」即可生效，无需重启。</p>
+            <h3 className="form-section__title">{t('settings.configFile')}</h3>
+            <p className="form-hint">{t('settings.configHint')}</p>
             <code className="path-box">{configPath}</code>
             <div className="form-actions form-actions--wrap">
               <button type="button" className="btn btn--ghost btn--sm" onClick={onOpenConfigFile}>
                 <IconExternal size={14} />
-                打开配置文件
+                {t('settings.openFile')}
               </button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={onReload}>
                 <IconRefresh size={14} />
-                重新加载配置
+                {t('settings.reload')}
               </button>
             </div>
           </section>
@@ -300,10 +333,10 @@ export function SettingsModal({
 
         <div className="modal__foot">
           <button type="button" className="btn btn--ghost" onClick={onClose}>
-            取消
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn btn--primary" disabled={saving} onClick={handleSave}>
-            {saving ? '保存中…' : '保存'}
+            {saving ? t('settings.saving') : t('settings.save')}
           </button>
         </div>
       </div>

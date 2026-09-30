@@ -1,6 +1,6 @@
 {
-  "_comment": "ImageKit 上传工具配置模板。把本文件复制为 config.json 并填写下方字段即可。Public key / Private key 在 ImageKit 控制台 Developer Options -> API Keys 中获取。",
-  "_privateKeyWarning": "Private Key 属于敏感凭证，请勿提交到 Git 仓库或分享给他人。",
+  "_comment": "ImageKit Uploader config template. Copy this file to config.json and fill in the fields below. Get the Public Key / Private Key from the ImageKit dashboard under Developer Options -> API Keys.",
+  "_privateKeyWarning": "The Private Key is a sensitive credential. Never commit it to a Git repository or share it with anyone.",
   "name": "ImageKit Uploader",
   "publicKey": "public_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
   "privateKey": "private_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -11,5 +11,6 @@
   "concurrency": 3,
   "theme": "dark",
   "customEndpoint": "",
-  "apiEndpoint": ""
+  "apiEndpoint": "",
+  "language": "en"
 }

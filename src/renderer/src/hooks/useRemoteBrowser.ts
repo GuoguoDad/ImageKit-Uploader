@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { TranslateFn } from '@shared/i18n'
 import type { RemoteFolder, RemoteListing } from '@shared/types'
+import { useI18n } from '../lib/i18n'
 import { remoteParentPath } from '../lib/utils'
 import type { Toast } from './useToasts'
 
@@ -31,9 +33,13 @@ export interface RemoteBrowser {
 /** 云端目录浏览的状态与操作。foldersOnly 用于「选择上传目录」的轻量场景 */
 export function useRemoteBrowser(
   push: (kind: Toast['kind'], message: string) => void,
-  options: { foldersOnly?: boolean } = {}
+  options: { foldersOnly?: boolean; t?: TranslateFn; locale?: string } = {}
 ): RemoteBrowser {
   const foldersOnly = options.foldersOnly ?? false
+  // App 在 I18nProvider 之外调用本 hook，因此允许显式传入；否则走上下文
+  const ctx = useI18n()
+  const t = options.t ?? ctx.t
+  const locale = options.locale ?? ctx.locale
 
   const [listing, setListing] = useState<RemoteListing | null>(null)
   const [pendingFolders, setPendingFolders] = useState<RemoteFolder[]>([])
@@ -152,7 +158,7 @@ export function useRemoteBrowser(
 
       // 先本地乐观插入，避免用户以为没建成
       setPendingFolders((prev) => [...prev.filter((p) => p.path !== res.data.path), res.data])
-      push('success', `已创建目录 ${res.data.path}`)
+      push('success', t('toast.folderCreated', { path: res.data.path }))
 
       clearTimers()
       for (const delay of INDEX_REFRESH_DELAYS) {
@@ -161,7 +167,7 @@ export function useRemoteBrowser(
 
       return res.data.path
     },
-    [clearTimers, push, refresh]
+    [clearTimers, push, refresh, t]
   )
 
   /** 合并「本地刚创建」的目录 */
@@ -176,8 +182,8 @@ export function useRemoteBrowser(
     )
     if (extra.length === 0) return base
 
-    return [...extra, ...base].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
-  }, [listing, pendingFolders])
+    return [...extra, ...base].sort((a, b) => a.name.localeCompare(b.name, locale))
+  }, [listing, pendingFolders, locale])
 
   return {
     listing,

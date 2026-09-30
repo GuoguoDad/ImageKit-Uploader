@@ -13,6 +13,7 @@ import type {
   UploadResult
 } from '@shared/types'
 import { mimeFor } from './mime'
+import { mainLocale, mainT } from './lang'
 
 /** ImageKit 官方上传端点 */
 export const DEFAULT_UPLOAD_ENDPOINT = 'https://upload.imagekit.io/api/v1/files/upload'
@@ -36,8 +37,8 @@ export function createAuthParams(privateKey: string, ttlSeconds = SIGNATURE_TTL_
 
 /** 校验凭证是否齐全，缺失时抛出可读错误 */
 function assertCredentials(config: AppConfig): void {
-  if (!config.publicKey) throw new Error('未配置 Public Key，请在「设置」中填写。')
-  if (!config.privateKey) throw new Error('未配置 Private Key，请在「设置」中填写。')
+  if (!config.publicKey) throw new Error(mainT('error.missingPublicKey'))
+  if (!config.privateKey) throw new Error(mainT('error.missingPrivateKey'))
 }
 
 /** URL Endpoint 拼接出最终的 CDN 访问地址 */
@@ -99,7 +100,7 @@ function request(options: RequestOptions): Promise<string> {
 
   return new Promise<string>((resolve, reject) => {
     if (signal?.aborted) {
-      reject(new Error('已取消'))
+      reject(new Error(mainT('error.canceled')))
       return
     }
 
@@ -129,7 +130,7 @@ function request(options: RequestOptions): Promise<string> {
     )
 
     const onAbort = (): void => {
-      req.destroy(new Error('已取消'))
+      req.destroy(new Error(mainT('error.canceled')))
     }
     signal?.addEventListener('abort', onAbort, { once: true })
 
@@ -143,7 +144,7 @@ function request(options: RequestOptions): Promise<string> {
     })
 
     req.setTimeout(REQUEST_TIMEOUT_MS, () => {
-      req.destroy(new Error('请求超时，请检查网络后重试。'))
+      req.destroy(new Error(mainT('error.timeout')))
     })
 
     if (!body || body.length === 0) {
@@ -180,7 +181,7 @@ function request(options: RequestOptions): Promise<string> {
 function extractErrorMessage(text: string, statusCode: number): string {
   // ImageKit 在凭证错误时返回 403 + "Your account cannot be authenticated."
   if (/cannot be authenticated/i.test(text)) {
-    return '鉴权失败：账号无法通过验证，请检查 Private Key 是否填写正确（注意首尾不要有多余空格）。'
+    return mainT('error.authFailed')
   }
   try {
     const json = JSON.parse(text) as { message?: string; error?: string; reason?: string }
@@ -190,9 +191,9 @@ function extractErrorMessage(text: string, statusCode: number): string {
     /* 非 JSON 响应，走下面的兜底 */
   }
   const snippet = text.trim().slice(0, 200)
-  if (statusCode === 401) return '鉴权失败，请检查 Public Key / Private Key 是否正确。'
-  if (statusCode === 403) return '没有权限，请检查 Private Key 的权限范围。'
-  return snippet || `请求失败（HTTP ${statusCode}）`
+  if (statusCode === 401) return mainT('error.unauthorized')
+  if (statusCode === 403) return mainT('error.forbidden')
+  return snippet || mainT('error.requestFailed', { status: statusCode })
 }
 
 export interface UploadParams {
@@ -266,7 +267,7 @@ export async function uploadFile(params: UploadParams): Promise<UploadResult> {
 
   const json = JSON.parse(text) as UploadResult & { message?: string }
   if (!json.fileId) {
-    throw new Error(json.message ?? '上传失败：服务端未返回 fileId。')
+    throw new Error(json.message ?? mainT('error.uploadNoFileId'))
   }
 
   return {
@@ -362,7 +363,7 @@ export function remoteParent(path: string): string | null {
 /** 云端路径的展示名 */
 function remoteName(path: string): string {
   const normalized = normalizeRemotePath(path)
-  if (normalized === '/') return '根目录'
+  if (normalized === '/') return mainT('common.root')
   return normalized.slice(normalized.lastIndexOf('/') + 1)
 }
 
@@ -435,7 +436,7 @@ export async function listRemoteFolders(config: AppConfig, path: string): Promis
     .filter((item) => item.type === 'folder' || Boolean(item.folderPath))
     .map(toRemoteFolder)
     .filter((folder): folder is RemoteFolder => folder !== null)
-    .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+    .sort((a, b) => a.name.localeCompare(b.name, mainLocale()))
 }
 
 /** 列出某个云端目录下的文件（仅一层，支持分页） */
@@ -529,9 +530,9 @@ export async function createRemoteFolder(
   assertCredentials(config)
 
   const safe = String(name ?? '').trim()
-  if (!safe) throw new Error('目录名不能为空。')
-  if (/[/\\]/.test(safe)) throw new Error('目录名不能包含 / 或 \\ 。')
-  if (safe === '.' || safe === '..') throw new Error('目录名不合法。')
+  if (!safe) throw new Error(mainT('error.folderNameEmpty'))
+  if (/[/\\]/.test(safe)) throw new Error(mainT('error.folderNameSlash'))
+  if (safe === '.' || safe === '..') throw new Error(mainT('error.folderNameInvalid'))
 
   const parent = normalizeRemotePath(parentPath)
   await apiRequest<Record<string, never>>(config, 'POST', '/folder', {
@@ -554,15 +555,15 @@ export async function testConnection(config: AppConfig): Promise<TestResult> {
 
   const folderNote =
     folders.length > 0
-      ? `根目录下已发现 ${folders.length} 个目录。`
-      : '根目录下暂时没有子目录，上传后即可看到。'
+      ? mainT('test.foldersFound', { n: folders.length })
+      : mainT('test.noFolders')
 
   const endpointNote = config.urlEndpoint
-    ? `URL Endpoint：${config.urlEndpoint}`
-    : '尚未填写 URL Endpoint，上传后请手动复制链接。'
+    ? mainT('test.endpoint', { url: config.urlEndpoint })
+    : mainT('test.noEndpoint')
 
   return {
-    message: `连接成功，凭证有效。${folderNote}\n${endpointNote}`,
+    message: `${mainT('test.success')}${folderNote}\n${endpointNote}`,
     folderCount: folders.length
   }
 }

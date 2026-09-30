@@ -1,3 +1,5 @@
+import type { TranslateFn } from '@shared/i18n'
+
 /** 拼接 className，过滤掉假值 */
 export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ')
@@ -17,8 +19,8 @@ export function formatBytes(bytes: number | undefined): string {
   return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[index]}`
 }
 
-/** 相对时间：刚刚 / 3 分钟前 / 2 天前 */
-export function formatRelativeTime(iso: string): string {
+/** 相对时间：刚刚 / 3 分钟前 / 2 天前（文案随界面语言变化） */
+export function formatRelativeTime(iso: string, t: TranslateFn, locale = 'en'): string {
   const time = new Date(iso).getTime()
   if (Number.isNaN(time)) return ''
   const diff = Date.now() - time
@@ -26,11 +28,11 @@ export function formatRelativeTime(iso: string): string {
   const hour = 60 * minute
   const day = 24 * hour
 
-  if (diff < minute) return '刚刚'
-  if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`
-  if (diff < day) return `${Math.floor(diff / hour)} 小时前`
-  if (diff < 30 * day) return `${Math.floor(diff / day)} 天前`
-  return new Date(iso).toLocaleDateString('zh-CN')
+  if (diff < minute) return t('time.justNow')
+  if (diff < hour) return t('time.minutesAgo', { n: Math.floor(diff / minute) })
+  if (diff < day) return t('time.hoursAgo', { n: Math.floor(diff / hour) })
+  if (diff < 30 * day) return t('time.daysAgo', { n: Math.floor(diff / day) })
+  return new Date(iso).toLocaleDateString(locale)
 }
 
 /** 去掉扩展名的文件名 */
@@ -151,9 +153,9 @@ export function remoteParentPath(path: string): string | null {
   return parts.length === 1 ? '/' : `/${parts.slice(0, -1).join('/')}`
 }
 
-/** 云端路径转面包屑，根目录显示为「根目录」 */
-export function remoteBreadcrumbs(path: string): Crumb[] {
-  const crumbs: Crumb[] = [{ name: '根目录', path: '/' }]
+/** 云端路径转面包屑，根目录的展示名由调用方按当前语言传入 */
+export function remoteBreadcrumbs(path: string, rootName: string): Crumb[] {
+  const crumbs: Crumb[] = [{ name: rootName, path: '/' }]
   let acc = ''
   for (const part of String(path ?? '')
     .split('/')

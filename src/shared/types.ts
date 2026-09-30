@@ -2,6 +2,8 @@
  * 主进程 / 渲染进程共享的类型定义
  */
 
+import type { Language } from './i18n'
+
 /** 应用配置（持久化在 config.json，可后期手动修改） */
 export interface AppConfig {
   /** 工具显示名称（ImageKit 控制台里 API Key 对应的 Name / 账号标识） */
@@ -26,6 +28,8 @@ export interface AppConfig {
   customEndpoint: string
   /** 自定义管理 API 地址（分区域账号 / 代理场景，留空使用 https://api.imagekit.io/v1） */
   apiEndpoint: string
+  /** 界面语言（en / zh），默认 en */
+  language: Language
 }
 
 /** ImageKit 上传接口返回结果（只保留用得到的字段） */

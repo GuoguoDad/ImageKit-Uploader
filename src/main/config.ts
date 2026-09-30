@@ -1,12 +1,14 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
+import { DEFAULT_LANGUAGE, normalizeLanguage, translate } from '@shared/i18n'
 import type { AppConfig } from '@shared/types'
+import { setMainLanguage } from './lang'
 
 /** 配置文件名 */
 const CONFIG_FILE = 'config.json'
 
-/** 默认配置：后期只需修改 config.json 即可生效 */
+/** 默认配置：后期只需修改 config.json 即可生效（默认英文） */
 export const DEFAULT_CONFIG: AppConfig = {
   name: 'ImageKit Uploader',
   publicKey: '',
@@ -18,16 +20,17 @@ export const DEFAULT_CONFIG: AppConfig = {
   concurrency: 3,
   theme: 'dark',
   customEndpoint: '',
-  apiEndpoint: ''
+  apiEndpoint: '',
+  language: DEFAULT_LANGUAGE
 }
 
-/** 写入磁盘时的首行说明（读取时会忽略以下划线开头的键） */
-const FILE_HEADER: Record<string, string> = {
-  _comment:
-    'ImageKit 上传工具配置文件。修改后保存，回到应用点击「重新加载配置」即可生效，无需重启。',
-  _fields:
-    'name=工具显示名 | publicKey / privateKey = ImageKit API Keys | urlEndpoint = CDN 地址 | defaultFolder = 默认上传目录 | apiEndpoint = 管理 API 地址（留空用官方）',
-  _privateKeyWarning: 'Private Key 为敏感凭证，请勿提交到 Git 或分享给他人。'
+/** 写入磁盘时的首行说明（读取时会忽略以下划线开头的键，语言跟随配置） */
+function fileHeader(lang: AppConfig['language']): Record<string, string> {
+  return {
+    _comment: translate(lang, 'configFile.comment'),
+    _fields: translate(lang, 'configFile.fields'),
+    _privateKeyWarning: translate(lang, 'configFile.privateKeyWarning')
+  }
 }
 
 /**
@@ -68,6 +71,9 @@ export function normalize(input: Partial<AppConfig>): AppConfig {
   const c = Number(merged.concurrency)
   merged.concurrency = Number.isFinite(c) ? Math.min(8, Math.max(1, Math.floor(c))) : 3
   merged.theme = ['system', 'light', 'dark'].includes(merged.theme) ? merged.theme : 'dark'
+  merged.language = normalizeLanguage(merged.language)
+  // 主进程的报错文案 / 系统弹窗也跟随界面语言
+  setMainLanguage(merged.language)
   return merged
 }
 
@@ -81,11 +87,17 @@ export function normalizeFolder(folder: string): string {
 function writeConfigFile(config: AppConfig): void {
   const path = getConfigPath()
   mkdirSync(join(path, '..'), { recursive: true })
-  const payload = { ...FILE_HEADER, ...config }
+  const payload = { ...fileHeader(config.language), ...config }
   const json = JSON.stringify(payload, null, 2) + '\n'
   const tmp = `${path}.tmp`
   writeFileSync(tmp, json, 'utf8')
   renameSync(tmp, path)
+}
+
+/** 兜底配置（顺便把主进程语言同步成默认值） */
+function fallbackConfig(): AppConfig {
+  setMainLanguage(DEFAULT_CONFIG.language)
+  return { ...DEFAULT_CONFIG }
 }
 
 /** 首次启动时生成一份带注释的配置文件，方便后期直接编辑 */
@@ -93,6 +105,7 @@ export function ensureConfigFile(): AppConfig {
   const path = getConfigPath()
   if (!existsSync(path)) {
     writeConfigFile(DEFAULT_CONFIG)
+    setMainLanguage(DEFAULT_CONFIG.language)
     return { ...DEFAULT_CONFIG }
   }
   return loadConfig()
@@ -102,12 +115,12 @@ export function ensureConfigFile(): AppConfig {
 export function loadConfig(): AppConfig {
   const path = getConfigPath()
   try {
-    if (!existsSync(path)) return { ...DEFAULT_CONFIG }
+    if (!existsSync(path)) return fallbackConfig()
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
     return normalize(stripMeta(raw) as Partial<AppConfig>)
   } catch (err) {
     console.error('[config] 读取配置失败，使用默认配置：', err)
-    return { ...DEFAULT_CONFIG }
+    return fallbackConfig()
   }
 }
 
