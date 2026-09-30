@@ -6,6 +6,8 @@ A desktop uploader for [imagekit.io](https://imagekit.io/) built with **Electron
 
 The Public Key, Private Key, and Name all live in the app's **config file**. Change the config later and it takes effect immediately — no rebuild required.
 
+<img src="images/shot_en.png">
+
 ---
 
 ## Features
