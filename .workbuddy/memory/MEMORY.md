@@ -37,6 +37,12 @@ ImageKit.io 桌面上传工具，Electron + React + Vite + TypeScript，目标�
 - 仓库 `.npmrc` 保持 npmmirror（本地开发快）；CI 用 `NPM_CONFIG_REGISTRY` 环境变量覆盖，不改仓库文件。
 - 产物文件名统一用 `${name}`（imagekit-upload）而非 `${productName}`，避免空格。
 - 未做代码签名（`identity: null`），发布说明里要提示 macOS 右键打开 / Windows SmartScreen。
+- **mac 的两个架构必须串行打包**：dmg 挂载卷名取自 `dmg.title`(=productName)，
+  两架构同名，并发时会互相占用 `/Volumes/ImageKit Uploader`，`hdiutil detach`
+  报 "Resource busy"(exit 16) 重试 6 次后中断 job（v1.0.0 的 CI 就是这样挂的）。
+  → `electron-builder.yml` 的 `mac.target` **不要写死 `arch`**（config 里的 arch 会覆盖
+  命令行 `--arm64/--x64`，写死就拆不开）；架构由命令行给，且逐架构串行调用。
+  CI 里另加 `sudo mdutil -a -i off` 关掉 Spotlight 索引降低卷占用概率。
 
 ## 常用命令
 ```bash

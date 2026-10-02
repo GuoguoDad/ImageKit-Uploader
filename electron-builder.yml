@@ -17,11 +17,13 @@ compression: normal
 
 mac:
   category: public.app-category.developer-tools
+  # 注意：这里不写死 arch。dmg 的挂载卷名取自 dmg.title（= productName），
+  # 两个架构同名，若并发构建会互相占用卷，导致 hdiutil detach 报
+  # "Resource busy"(exit 16) 并中断打包（曾在 GitHub Actions 上复现）。
+  # 因此架构一律由命令行显式指定，且必须串行执行：
+  #   electron-builder --mac --arm64 && electron-builder --mac --x64
   target:
     - target: dmg
-      arch:
-        - arm64
-        - x64
   darkModeSupport: true
   hardenedRuntime: false
   gatekeeperAssess: false

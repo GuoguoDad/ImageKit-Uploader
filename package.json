@@ -12,9 +12,9 @@
     "preview": "electron-vite preview",
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",
-    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:mac": "electron-vite build && electron-builder --mac --arm64 && electron-builder --mac --x64",
     "build:win": "electron-vite build && electron-builder --win",
-    "build:all": "electron-vite build && electron-builder --mac --win",
+    "build:all": "electron-vite build && electron-builder --mac --arm64 && electron-builder --mac --x64 && electron-builder --win",
     "build:unpack": "electron-vite build && electron-builder --dir"
   },
   "devDependencies": {

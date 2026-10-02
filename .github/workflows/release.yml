@@ -49,11 +49,33 @@ jobs:
       - name: 构建三端产物
         run: npm run build
 
+      - name: 关闭 Spotlight 索引
+        # 打包 dmg 需要挂载 / 卸载临时卷。runner 上 Spotlight 对新挂载卷的索引
+        # 会让 hdiutil detach 报 "Resource busy"，进而中断打包。
+        # 关掉索引（只影响这台一次性 CI 机器）即可避免。
+        run: sudo mdutil -a -i off || true
+
       - name: 打包 dmg（arm64 + x64）
         env:
           # 未做代码签名，跳过签名身份自动发现，避免 CI 卡住
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --mac --publish never
+        run: |
+          # arm64 与 x64 必须【串行】构建，不能放在同一次调用里：
+          # dmg 的挂载卷名取自 dmg.title（= productName），两个架构同名，
+          # 并发时第二个卷会占用 /Volumes/ImageKit Uploader，导致第一个的
+          #   ⨯ unable to execute hdiutil args=["detach","-quiet","/Volumes/ImageKit Uploader"]
+          # 重试 6 次仍为 "Resource busy"(exit 16)，整个 job 失败。
+          build_dmg() {
+            npx electron-builder --mac --arm64 --publish never &&
+            npx electron-builder --mac --x64 --publish never
+          }
+
+          build_dmg || {
+            echo "::warning::dmg 打包失败，清理残留挂载卷后重试一次"
+            hdiutil detach -force "/Volumes/ImageKit Uploader" >/dev/null 2>&1 || true
+            sleep 10
+            build_dmg
+          }
 
       - name: 上传安装包
         uses: actions/upload-artifact@v4
