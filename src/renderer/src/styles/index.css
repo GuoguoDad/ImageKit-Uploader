@@ -1293,12 +1293,21 @@ kbd {
   position: fixed;
   inset: 0;
   z-index: 50;
-  display: grid;
-  place-items: center;
+  /* 用 flex 而不是 grid：grid 的隐式行是 auto 高度，百分比 max-height 会被当成 auto，
+     弹窗按内容高度撑开并溢出窗口，.modal__body 也就没有可滚动的高度了。
+     flex 容器高度确定（fixed inset: 0），max-height: 100% 才能真正生效。 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 26px;
   background: rgba(4, 7, 13, 0.62);
   backdrop-filter: blur(3px);
   animation: fade 0.14s ease-out;
+  /* 必须显式排除拖拽区：-webkit-app-region: drag 的区域会吞掉覆盖层的指针事件，
+     而顶栏 .app-header 就是 drag 带（窗口用 titleBarStyle: 'hiddenInset'）。
+     弹窗标题栏正好压在顶栏上，缺这一行时右上角关闭按钮点不动。 */
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 .modal {
@@ -1318,6 +1327,7 @@ kbd {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+  flex: none;
   padding: 16px 18px 12px;
   border-bottom: 1px solid var(--border);
 }
@@ -1348,6 +1358,7 @@ kbd {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  flex: none;
   padding: 12px 18px;
   border-top: 1px solid var(--border);
   background: var(--panel-2);
